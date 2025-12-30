@@ -10,33 +10,24 @@ import lib.flows as flows
 
 
 def estimate_entropies(qz_samples, qz_params, q_dist):
-    """Computes the term:
-        E_{p(x)} E_{q(z|x)} [-log q(z)]
-    and
-        E_{p(x)} E_{q(z_j|x)} [-log q(z_j)]
-    where q(z) = 1/N sum_n=1^N q(z|x_n).
-    Assumes samples are from q(z|x) for *all* x in the dataset.
-    Assumes that q(z|x) is factorial ie. q(z|x) = prod_j q(z_j|x).
-
-    Computes numerically stable NLL:
-        - log q(z) = log N - logsumexp_n=1^N log q(z|x_n)
-
-    Inputs:
-    -------
-        qz_samples (K, S) Variable
-        qz_params  (N, K, nparams) Variable
     """
-
-    # Only take a sample subset of the samples
-    qz_samples = qz_samples.index_select(1, Variable(torch.randperm(qz_samples.size(1))[:10000].cuda()))
+    qz_samples: (K, S) tensor on same device as qz_params
+    qz_params:  (N, K, nparams) tensor
+    """
+    device = qz_params.device
+    # Only take a subset of samples (up to 10k)
+    S = qz_samples.size(1)
+    take = min(10000, S)
+    idx = torch.randperm(S, device=qz_samples.device)[:take]
+    qz_samples = qz_samples.index_select(1, idx)
 
     K, S = qz_samples.size()
     N, _, nparams = qz_params.size()
-    assert(nparams == q_dist.nparams)
-    assert(K == qz_params.size(1))
+    assert nparams == q_dist.nparams
+    assert K == qz_params.size(1)
 
-    marginal_entropies = torch.zeros(K).cuda()
-    joint_entropy = torch.zeros(1).cuda()
+    marginal_entropies = torch.zeros(K, device=device)
+    joint_entropy = torch.zeros(1, device=device)
 
     pbar = tqdm(total=S)
     k = 0
@@ -48,10 +39,10 @@ def estimate_entropies(qz_samples, qz_params, q_dist):
         k += batch_size
 
         # computes - log q(z_i) summed over minibatch
-        marginal_entropies += (math.log(N) - logsumexp(logqz_i, dim=0, keepdim=False).data).sum(1)
+        marginal_entropies += (math.log(N) - logsumexp(logqz_i, dim=0, keepdim=False)).sum(1).detach()
         # computes - log q(z) summed over minibatch
         logqz = logqz_i.sum(1)  # (N, S)
-        joint_entropy += (math.log(N) - logsumexp(logqz, dim=0, keepdim=False).data).sum(0)
+        joint_entropy += (math.log(N) - logsumexp(logqz, dim=0, keepdim=False)).sum(0).detach()
         pbar.update(batch_size)
     pbar.close()
 
@@ -83,57 +74,47 @@ def logsumexp(value, dim=None, keepdim=False):
 
 
 def analytical_NLL(qz_params, q_dist, prior_dist, qz_samples=None):
-    """Computes the quantities
-        1/N sum_n=1^N E_{q(z|x)} [ - log q(z|x) ]
-    and
-        1/N sum_n=1^N E_{q(z_j|x)} [ - log p(z_j) ]
-
-    Inputs:
-    -------
-        qz_params  (N, K, nparams) Variable
-
-    Returns:
-    --------
-        nlogqz_condx (K,) Variable
-        nlogpz (K,) Variable
     """
-    pz_params = Variable(torch.zeros(1).type_as(qz_params.data).expand(qz_params.size()), volatile=True)
-
+    Returns:
+        nlogqz_condx (K,) tensor
+        nlogpz (K,) tensor
+    """
+    pz_params = torch.zeros_like(qz_params)
     nlogqz_condx = q_dist.NLL(qz_params).mean(0)
     nlogpz = prior_dist.NLL(pz_params, qz_params).mean(0)
     return nlogqz_condx, nlogpz
 
 
 def elbo_decomposition(vae, dataset_loader):
-    N = len(dataset_loader.dataset)  # number of data samples
-    K = vae.z_dim                    # number of latent variables
-    S = 1                            # number of latent variable samples
+    device = next(vae.parameters()).device
+    N = len(dataset_loader.dataset)
+    K = vae.z_dim
+    S = 1
     nparams = vae.q_dist.nparams
 
     print('Computing q(z|x) distributions.')
-    # compute the marginal q(z_j|x_n) distributions
-    qz_params = torch.Tensor(N, K, nparams)
+    qz_params = torch.empty(N, K, nparams, device=device)
     n = 0
-    logpx = 0
-    for xs in dataset_loader:
-        batch_size = xs.size(0)
-        xs = Variable(xs.view(batch_size, -1, 64, 64).cuda(), volatile=True)
-        z_params = vae.encoder.forward(xs).view(batch_size, K, nparams)
-        qz_params[n:n + batch_size] = z_params.data
-        n += batch_size
+    logpx = 0.0
+    vae.eval()
+    with torch.no_grad():
+        for xs in dataset_loader:
+            batch_size = xs.size(0)
+            xs = xs.view(batch_size, -1, 64, 64).to(device)
+            z_params = vae.encoder(xs).view(batch_size, K, nparams)
+            qz_params[n:n + batch_size] = z_params
+            n += batch_size
 
-        # estimate reconstruction term
-        for _ in range(S):
-            z = vae.q_dist.sample(params=z_params)
-            x_params = vae.decoder.forward(z)
-            logpx += vae.x_dist.log_density(xs, params=x_params).view(batch_size, -1).data.sum()
+            # estimate reconstruction term
+            for _ in range(S):
+                z = vae.q_dist.sample(params=z_params)
+                x_params = vae.decoder(z)
+                logpx += vae.x_dist.log_density(xs, params=x_params).view(batch_size, -1).sum().item()
+
     # Reconstruction term
     logpx = logpx / (N * S)
 
-    qz_params = Variable(qz_params.cuda(), volatile=True)
-
     print('Sampling from q(z).')
-    # sample S times from each marginal q(z_j|x_n)
     qz_params_expanded = qz_params.view(N, K, 1, nparams).expand(N, K, S, nparams)
     qz_samples = vae.q_dist.sample(params=qz_params_expanded)
     qz_samples = qz_samples.transpose(0, 1).contiguous().view(K, N * S)
@@ -144,34 +125,25 @@ def elbo_decomposition(vae, dataset_loader):
     if hasattr(vae.q_dist, 'NLL'):
         nlogqz_condx = vae.q_dist.NLL(qz_params).mean(0)
     else:
-        nlogqz_condx = - vae.q_dist.log_density(qz_samples,
-            qz_params_expanded.transpose(0, 1).contiguous().view(K, N * S)).mean(1)
+        nlogqz_condx = - vae.q_dist.log_density(
+            qz_samples,
+            qz_params_expanded.transpose(0, 1).contiguous().view(K, N * S)
+        ).mean(1)
 
     if hasattr(vae.prior_dist, 'NLL'):
-        pz_params = vae._get_prior_params(N * K).contiguous().view(N, K, -1)
+        pz_params = vae._get_prior_params(N * K).to(device).contiguous().view(N, K, -1)
         nlogpz = vae.prior_dist.NLL(pz_params, qz_params).mean(0)
     else:
         nlogpz = - vae.prior_dist.log_density(qz_samples.transpose(0, 1)).mean(0)
 
-    # nlogqz_condx, nlogpz = analytical_NLL(qz_params, vae.q_dist, vae.prior_dist)
-    nlogqz_condx = nlogqz_condx.data
-    nlogpz = nlogpz.data
-
     # Independence term
-    # KL(q(z)||prod_j q(z_j)) = log q(z) - sum_j log q(z_j)
-    dependence = (- joint_entropy + marginal_entropies.sum())[0]
-
+    dependence = (- joint_entropy + marginal_entropies.sum())[0].item()
     # Information term
-    # KL(q(z|x)||q(z)) = log q(z|x) - log q(z)
-    information = (- nlogqz_condx.sum() + joint_entropy)[0]
-
+    information = (- nlogqz_condx.sum() + joint_entropy)[0].item()
     # Dimension-wise KL term
-    # sum_j KL(q(z_j)||p(z_j)) = sum_j (log q(z_j) - log p(z_j))
-    dimwise_kl = (- marginal_entropies + nlogpz).sum()
-
-    # Compute sum of terms analytically
-    # KL(q(z|x)||p(z)) = log q(z|x) - log p(z)
-    analytical_cond_kl = (- nlogqz_condx + nlogpz).sum()
+    dimwise_kl = (- marginal_entropies + nlogpz).sum().item()
+    # Analytical E_p(x)[ KL(q(z|x)||p(z)) ]
+    analytical_cond_kl = (- nlogqz_condx + nlogpz).sum().item()
 
     print('Dependence: {}'.format(dependence))
     print('Information: {}'.format(information))
@@ -179,7 +151,15 @@ def elbo_decomposition(vae, dataset_loader):
     print('Analytical E_p(x)[ KL(q(z|x)||p(z)) ]: {}'.format(analytical_cond_kl))
     print('Estimated  ELBO: {}'.format(logpx - analytical_cond_kl))
 
-    return logpx, dependence, information, dimwise_kl, analytical_cond_kl, marginal_entropies, joint_entropy
+    return (
+        float(logpx),
+        float(dependence),
+        float(information),
+        float(dimwise_kl),
+        float(analytical_cond_kl),
+        marginal_entropies.detach().cpu(),
+        joint_entropy.detach().cpu(),
+    )
 
 
 if __name__ == '__main__':

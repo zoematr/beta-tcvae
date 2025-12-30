@@ -9,7 +9,7 @@ import torch.optim as optim
 import visdom
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-
+import logging
 import lib.dist as dist
 import lib.utils as utils
 import lib.datasets as dset
@@ -288,7 +288,7 @@ def setup_data_loaders(args, use_cuda=False):
     else:
         raise ValueError('Unknown dataset ' + str(args.dataset))
 
-    kwargs = {'num_workers': 4, 'pin_memory': use_cuda}
+    kwargs = {'num_workers': getattr(args, 'workers', 0), 'pin_memory': use_cuda}
     train_loader = DataLoader(dataset=train_set,
         batch_size=args.batch_size, shuffle=True, **kwargs)
     return train_loader
@@ -380,13 +380,27 @@ def main():
     parser.add_argument('--visdom', action='store_true', help='whether plotting in visdom is desired')
     parser.add_argument('--save', default='test1')
     parser.add_argument('--log_freq', default=200, type=int, help='num iterations per log')
+    parser.add_argument('--workers', type=int, default=0, help='DataLoader workers (0 on macOS to avoid pickling issues)')
     args = parser.parse_args()
 
-    torch.cuda.set_device(args.gpu)
+    # Select device safely
+    if torch.cuda.is_available():
+        torch.cuda.set_device(args.gpu)
+        device = torch.device(f'cuda:{args.gpu}')
+        pin_memory = True
+        use_cuda_flag = True
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = torch.device('mps')
+        pin_memory = False
+        use_cuda_flag = False
+    else:
+        device = torch.device('cpu')
+        pin_memory = False
+        use_cuda_flag = False
 
     # data loader
-    train_loader = setup_data_loaders(args, use_cuda=True)
-
+    train_loader = setup_data_loaders(args, use_cuda=pin_memory)
+    logging.info("loaded data")
     # setup the VAE
     if args.dist == 'normal':
         prior_dist = dist.Normal()
@@ -398,8 +412,16 @@ def main():
         prior_dist = FactorialNormalizingFlow(dim=args.latent_dim, nsteps=32)
         q_dist = dist.Normal()
 
-    vae = VAE(z_dim=args.latent_dim, use_cuda=True, prior_dist=prior_dist, q_dist=q_dist,
-        include_mutinfo=not args.exclude_mutinfo, tcvae=args.tcvae, conv=args.conv, mss=args.mss)
+    vae = VAE(
+        z_dim=args.latent_dim,
+        use_cuda=use_cuda_flag,
+        prior_dist=prior_dist,
+        q_dist=q_dist,
+        include_mutinfo=not args.exclude_mutinfo,
+        tcvae=args.tcvae,
+        conv=args.conv,
+        mss=args.mss
+    )
 
     # setup the optimizer
     optimizer = optim.Adam(vae.parameters(), lr=args.learning_rate)
@@ -412,9 +434,11 @@ def main():
 
     # training loop
     dataset_size = len(train_loader.dataset)
-    num_iterations = len(train_loader) * args.num_epochs
+    #num_iterations = len(train_loader) * args.num_epochs
+    num_iterations = 3
     iteration = 0
     # initialize loss accumulator
+    logging.info("init loss accumulator")
     elbo_running_mean = utils.RunningAverageMeter()
     while iteration < num_iterations:
         for i, x in enumerate(train_loader):
@@ -423,16 +447,14 @@ def main():
             vae.train()
             anneal_kl(args, vae, iteration)
             optimizer.zero_grad()
-            # transfer to GPU
-            x = x.cuda(async=True)
-            # wrap the mini-batch in a PyTorch Variable
-            x = Variable(x)
+            # transfer to device
+            x = x.to(device, non_blocking=True)
             # do ELBO gradient and accumulate loss
             obj, elbo = vae.elbo(x, dataset_size)
             if utils.isnan(obj).any():
                 raise ValueError('NaN spotted in objective.')
             obj.mean().mul(-1).backward()
-            elbo_running_mean.update(elbo.mean().data[0])
+            elbo_running_mean.update(elbo.mean().item())
             optimizer.step()
 
             # report training diagnostics
@@ -445,6 +467,7 @@ def main():
                 vae.eval()
 
                 # plot training and test ELBOs
+                logging.info("call plotting")
                 if args.visdom:
                     display_samples(vae, x, vis)
                     plot_elbo(train_elbo, vis)
@@ -460,7 +483,7 @@ def main():
     utils.save_checkpoint({
         'state_dict': vae.state_dict(),
         'args': args}, args.save, 0)
-    dataset_loader = DataLoader(train_loader.dataset, batch_size=1000, num_workers=1, shuffle=False)
+    dataset_loader = DataLoader(train_loader.dataset, batch_size=1000, num_workers=0, shuffle=False)
     logpx, dependence, information, dimwise_kl, analytical_cond_kl, marginal_entropies, joint_entropy = \
         elbo_decomposition(vae, dataset_loader)
     torch.save({

@@ -3,3 +3,4 @@ data
 *.pyc
 *.png
 *.pdf
+.venv/

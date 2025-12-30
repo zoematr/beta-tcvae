@@ -6,6 +6,7 @@ import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import brewer2mpl
+import logging
 bmap = brewer2mpl.get_map('Set1', 'qualitative', 3)
 colors = bmap.mpl_colors
 
@@ -14,54 +15,57 @@ plt.style.use('ggplot')
 VAR_THRESHOLD = 1e-2
 
 
-def plot_vs_gt_shapes(vae, shapes_dataset, save, z_inds=None):
-    dataset_loader = DataLoader(shapes_dataset, batch_size=1000, num_workers=1, shuffle=False)
+def plot_vs_gt_shapes(vae, dataset, out_path, z_inds=None):
+    import torch
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
 
-    N = len(dataset_loader.dataset)  # number of data samples
-    K = vae.z_dim                    # number of latent variables
+    device = next(vae.parameters()).device
+    loader = DataLoader(dataset, batch_size=1000, shuffle=False, num_workers=0)
+
     nparams = vae.q_dist.nparams
-    vae.eval()
-
-    # print('Computing q(z|x) distributions.')
-    qz_params = torch.Tensor(N, K, nparams)
+    K = vae.z_dim
+    qz_params = torch.empty(len(dataset), K, nparams)
 
     n = 0
-    for xs in dataset_loader:
-        batch_size = xs.size(0)
-        xs = Variable(xs.view(batch_size, 1, 64, 64).cuda(), volatile=True)
-        qz_params[n:n + batch_size] = vae.encoder.forward(xs).view(batch_size, vae.z_dim, nparams).data
-        n += batch_size
+    vae.eval()
+    with torch.no_grad():
+        for xs in loader:
+            bs = xs.size(0)
+            xs = xs.view(bs, 1, 64, 64).to(device)
+            enc = vae.encoder(xs).view(bs, K, nparams).detach().cpu()
+            qz_params[n:n + bs] = enc
+            n += bs
 
+    # Shapes dataset grid: (shape=3, scale=6, rotation=40, pos_x=32, pos_y=32)
     qz_params = qz_params.view(3, 6, 40, 32, 32, K, nparams)
 
     # z_j is inactive if Var_x(E[z_j|x]) < eps.
-    qz_means = qz_params[:, :, :, :, :, :, 0]
-    var = torch.std(qz_means.contiguous().view(N, K), dim=0).pow(2)
+    qz_means = qz_params[..., 0]
+    var = torch.std(qz_means.contiguous().view(len(dataset), K), dim=0).pow(2)
     active_units = torch.arange(0, K)[var > VAR_THRESHOLD].long()
     print('Active units: ' + ','.join(map(str, active_units.tolist())))
-    n_active = len(active_units)
-    print('Number of active units: {}/{}'.format(n_active, vae.z_dim))
+    print('Number of active units: {}/{}'.format(len(active_units), vae.z_dim))
 
     if z_inds is None:
         z_inds = active_units
 
-    # subplots where subplot[i, j] is gt_i vs. z_j
-    mean_scale = qz_means.mean(2).mean(2).mean(2)  # (shape, scale, latent)
-    mean_rotation = qz_means.mean(1).mean(2).mean(2)  # (shape, rotation, latent)
-    mean_pos = qz_means.mean(0).mean(0).mean(0)  # (pos_x, pos_y, latent)
+    # GT factors vs latent means
+    mean_scale = qz_means.mean(2).mean(2).mean(2)      # (shape, scale, latent)
+    mean_rotation = qz_means.mean(1).mean(2).mean(2)   # (shape, rotation, latent)
+    mean_pos = qz_means.mean(0).mean(0).mean(0)        # (pos_x, pos_y, latent)
 
-    fig = plt.figure(figsize=(3, len(z_inds)))  # default is (8,6)
+    fig = plt.figure(figsize=(3, len(z_inds)))
     gs = gridspec.GridSpec(len(z_inds), 3)
-    gs.update(wspace=0, hspace=0)  # set the spacing between axes.
+    gs.update(wspace=0, hspace=0)
 
     vmin_pos = torch.min(mean_pos)
     vmax_pos = torch.max(mean_pos)
     for i, j in enumerate(z_inds):
         ax = fig.add_subplot(gs[i * 3])
         ax.imshow(mean_pos[:, :, j].numpy(), cmap=plt.get_cmap('coolwarm'), vmin=vmin_pos, vmax=vmax_pos)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_ylabel(r'$z_' + str(j) + r'$')
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.set_ylabel(r'$z_' + str(j.item() if torch.is_tensor(j) else j) + r'$')
         if i == len(z_inds) - 1:
             ax.set_xlabel(r'pos')
 
@@ -72,11 +76,8 @@ def plot_vs_gt_shapes(vae, shapes_dataset, save, z_inds=None):
         ax.plot(mean_scale[0, :, j].numpy(), color=colors[2])
         ax.plot(mean_scale[1, :, j].numpy(), color=colors[0])
         ax.plot(mean_scale[2, :, j].numpy(), color=colors[1])
-        ax.set_ylim([vmin_scale, vmax_scale])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        x0, x1 = ax.get_xlim()
-        y0, y1 = ax.get_ylim()
+        ax.set_ylim([vmin_scale, vmax_scale]); ax.set_xticks([]); ax.set_yticks([])
+        x0, x1 = ax.get_xlim(); y0, y1 = ax.get_ylim()
         ax.set_aspect(abs(x1 - x0) / abs(y1 - y0))
         if i == len(z_inds) - 1:
             ax.set_xlabel(r'scale')
@@ -88,105 +89,92 @@ def plot_vs_gt_shapes(vae, shapes_dataset, save, z_inds=None):
         ax.plot(mean_rotation[0, :, j].numpy(), color=colors[2])
         ax.plot(mean_rotation[1, :, j].numpy(), color=colors[0])
         ax.plot(mean_rotation[2, :, j].numpy(), color=colors[1])
-        ax.set_ylim([vmin_rotation, vmax_rotation])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        x0, x1 = ax.get_xlim()
-        y0, y1 = ax.get_ylim()
+        ax.set_ylim([vmin_rotation, vmax_rotation]); ax.set_xticks([]); ax.set_yticks([])
+        x0, x1 = ax.get_xlim(); y0, y1 = ax.get_ylim()
         ax.set_aspect(abs(x1 - x0) / abs(y1 - y0))
         if i == len(z_inds) - 1:
             ax.set_xlabel(r'rotation')
 
     fig.text(0.5, 0.03, 'Ground Truth', ha='center')
     fig.text(0.01, 0.5, 'Learned Latent Variables ', va='center', rotation='vertical')
-    plt.savefig(save)
+    plt.savefig(out_path)
     plt.close()
 
 
-def plot_vs_gt_faces(vae, faces_dataset, save, z_inds=None):
-    dataset_loader = DataLoader(faces_dataset, batch_size=1000, num_workers=1, shuffle=False)
+def plot_vs_gt_faces(vae, dataset, out_path, z_inds=None):
+    import torch
+    import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
 
-    N = len(dataset_loader.dataset)  # number of data samples
-    K = vae.z_dim                    # number of latent variables
+    device = next(vae.parameters()).device
+    loader = DataLoader(dataset, batch_size=1000, shuffle=False, num_workers=0)
+
     nparams = vae.q_dist.nparams
-    vae.eval()
-
-    # print('Computing q(z|x) distributions.')
-    qz_params = torch.Tensor(N, K, nparams)
+    K = vae.z_dim
+    qz_params = torch.empty(len(dataset), K, nparams)
 
     n = 0
-    for xs in dataset_loader:
-        batch_size = xs.size(0)
-        xs = Variable(xs.view(batch_size, 1, 64, 64).cuda(), volatile=True)
-        qz_params[n:n + batch_size] = vae.encoder.forward(xs).view(batch_size, vae.z_dim, nparams).data
-        n += batch_size
+    vae.eval()
+    with torch.no_grad():
+        for xs in loader:
+            bs = xs.size(0)
+            xs = xs.view(bs, 1, 64, 64).to(device)
+            enc = vae.encoder(xs).view(bs, K, nparams).detach().cpu()
+            qz_params[n:n + bs] = enc
+            n += bs
 
+    # Faces grid: (pose_az=50, pose_el=21, light_az=11, light_el=11)
     qz_params = qz_params.view(50, 21, 11, 11, K, nparams)
 
-    # z_j is inactive if Var_x(E[z_j|x]) < eps.
-    qz_means = qz_params[:, :, :, :, :, 0]
-    var = torch.std(qz_means.contiguous().view(N, K), dim=0).pow(2)
+    qz_means = qz_params[..., 0]
+    var = torch.std(qz_means.contiguous().view(len(dataset), K), dim=0).pow(2)
     active_units = torch.arange(0, K)[var > VAR_THRESHOLD].long()
     print('Active units: ' + ','.join(map(str, active_units.tolist())))
-    n_active = len(active_units)
-    print('Number of active units: {}/{}'.format(n_active, vae.z_dim))
+    print('Number of active units: {}/{}'.format(len(active_units), vae.z_dim))
 
     if z_inds is None:
         z_inds = active_units
 
-    # subplots where subplot[i, j] is gt_i vs. z_j
     mean_pose_az = qz_means.mean(3).mean(2).mean(0)  # (pose_az, latent)
     mean_pose_el = qz_means.mean(3).mean(1).mean(0)  # (pose_el, latent)
     mean_light_az = qz_means.mean(2).mean(1).mean(0)  # (light_az, latent)
 
-    fig = plt.figure(figsize=(len(z_inds), 3))  # default is (8,6)
+    fig = plt.figure(figsize=(len(z_inds), 3))
     gs = gridspec.GridSpec(3, len(z_inds))
-    gs.update(wspace=0, hspace=0)  # set the spacing between axes.
+    gs.update(wspace=0, hspace=0)
 
-    vmin_scale = torch.min(mean_pose_az)
-    vmax_scale = torch.max(mean_pose_az)
+    vmin_scale = torch.min(mean_pose_az); vmax_scale = torch.max(mean_pose_az)
     for i, j in enumerate(z_inds):
         ax = fig.add_subplot(gs[i])
         ax.plot(mean_pose_az[:, j].numpy())
-        ax.set_ylim([vmin_scale, vmax_scale])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        x0, x1 = ax.get_xlim()
-        y0, y1 = ax.get_ylim()
+        ax.set_ylim([vmin_scale, vmax_scale]); ax.set_xticks([]); ax.set_yticks([])
+        x0, x1 = ax.get_xlim(); y0, y1 = ax.get_ylim()
         ax.set_aspect(abs(x1 - x0) / abs(y1 - y0))
         if i == 0:
             ax.set_ylabel(r'azimuth')
 
-    vmin_scale = torch.min(mean_pose_el)
-    vmax_scale = torch.max(mean_pose_el)
+    vmin_scale = torch.min(mean_pose_el); vmax_scale = torch.max(mean_pose_el)
     for i, j in enumerate(z_inds):
         ax = fig.add_subplot(gs[len(z_inds) + i])
         ax.plot(mean_pose_el[:, j].numpy())
-        ax.set_ylim([vmin_scale, vmax_scale])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        x0, x1 = ax.get_xlim()
-        y0, y1 = ax.get_ylim()
+        ax.set_ylim([vmin_scale, vmax_scale]); ax.set_xticks([]); ax.set_yticks([])
+        x0, x1 = ax.get_xlim(); y0, y1 = ax.get_ylim()
         ax.set_aspect(abs(x1 - x0) / abs(y1 - y0))
         if i == 0:
             ax.set_ylabel(r'elevation')
 
-    vmin_scale = torch.min(mean_light_az)
-    vmax_scale = torch.max(mean_light_az)
+    vmin_scale = torch.min(mean_light_az); vmax_scale = torch.max(mean_light_az)
     for i, j in enumerate(z_inds):
         ax = fig.add_subplot(gs[2 * len(z_inds) + i])
         ax.plot(mean_light_az[:, j].numpy())
-        ax.set_ylim([vmin_scale, vmax_scale])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        x0, x1 = ax.get_xlim()
-        y0, y1 = ax.get_ylim()
+        ax.set_ylim([vmin_scale, vmax_scale]); ax.set_xticks([]); ax.set_yticks([])
+        x0, x1 = ax.get_xlim(); y0, y1 = ax.get_ylim()
         ax.set_aspect(abs(x1 - x0) / abs(y1 - y0))
         if i == 0:
             ax.set_ylabel(r'lighting')
 
     plt.suptitle('GT Factors vs. Latent Variables')
-    plt.savefig(save)
+    plt.savefig(out_path)
     plt.close()
 
 
