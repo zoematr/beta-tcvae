@@ -2,5 +2,6 @@ data
 *__pycache__
 *.pyc
 *.png
+*.pth
 *.pdf
 .venv/
