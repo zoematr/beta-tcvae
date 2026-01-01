@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import visdom
+import wandb
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import logging
