@@ -499,6 +499,5 @@ def main():
     eval('plot_vs_gt_' + args.dataset)(vae, dataset_loader.dataset, os.path.join(args.save, 'gt_vs_latent.png'))
     return vae
 
-
 if __name__ == '__main__':
     model = main()
