@@ -1,0 +1,91 @@
+[iteration 050] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -527.8521 (-1132.5589)
+Active units: 0,1,2,3,4,5,6,7,8,9
+Number of active units: 10/10
+[iteration 100] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -536.8555 (-666.6176)
+Active units: 0,2,3,4,5,6,7,8,9
+Number of active units: 9/10
+[iteration 150] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -415.2321 (-494.3267)
+Active units: 2,3,4,5,6,7,8,9
+Number of active units: 8/10
+[iteration 200] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -396.1738 (-429.3425)
+Active units: 0,1,2,3,4,5,6,7,8,9
+Number of active units: 10/10
+[iteration 250] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -368.9032 (-397.9470)
+Active units: 0,1,2,3,4,5,6,7,8,9
+Number of active units: 10/10
+[iteration 300] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -323.7143 (-369.3267)
+Active units: 0,1,2,3,4,5,6,7,8,9
+Number of active units: 10/10
+[iteration 350] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -296.1756 (-325.3048)
+Active units: 0,1,2,3,4,5,6,7,8,9
+Number of active units: 10/10
+[iteration 400] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -246.7763 (-275.0316)
+Active units: 0,1,2,3,4,5,6,8,9
+Number of active units: 9/10
+[iteration 450] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -216.7474 (-243.7306)
+Active units: 0,2,3,4,6,7,8,9
+Number of active units: 8/10
+[iteration 500] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -200.5341 (-217.9214)
+Active units: 0,2,3,4,5,6,7,8,9
+Number of active units: 9/10
+[iteration 550] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -174.8344 (-191.1723)
+Active units: 0,2,3,4,6,8,9
+Number of active units: 7/10
+[iteration 600] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -162.0629 (-172.7741)
+Active units: 0,2,3,4,6,8,9
+Number of active units: 7/10
+[iteration 650] time: 0.09 	beta 6.00 	lambda 0.00 training ELBO: -145.6565 (-162.4271)
+Active units: 3,4,6,8,9
+Number of active units: 5/10
+[iteration 700] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -155.0905 (-157.4982)
+Active units: 4,6,9
+Number of active units: 3/10
+[iteration 750] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -138.3709 (-152.7834)
+Active units: 4,6,9
+Number of active units: 3/10
+[iteration 800] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -142.7877 (-149.1480)
+Active units: 4,6,9
+Number of active units: 3/10
+[iteration 850] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -135.8648 (-144.0539)
+Active units: 1,4,6,9
+Number of active units: 4/10
+[iteration 900] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -136.8028 (-144.2138)
+Active units: 4,6,9
+Number of active units: 3/10
+[iteration 950] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -143.8483 (-143.0746)
+Active units: 4,6,9
+Number of active units: 3/10
+[iteration 1000] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -147.9283 (-143.4141)
+Active units: 4,6,9
+Number of active units: 3/10
+[iteration 1050] time: 0.08 	beta 6.00 	lambda 0.00 training ELBO: -145.0479 (-141.6389)
+Active units: 1,4,6,9
+Number of active units: 4/10
+[iteration 1100] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -139.7957 (-142.7548)
+Traceback (most recent call last):
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 526, in <module>
+    main()
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 500, in main
+    eval('plot_vs_gt_' + args.dataset)(vae, train_loader.dataset,
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/plot_latent_vs_true.py", line 36, in plot_vs_gt_shapes
+    enc = vae.encoder(xs).view(bs, K, nparams).detach().cpu()
+          ^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 44, in forward
+    h = self.act(self.fc1(h))
+                 ^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1775, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1786, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/nn/modules/linear.py", line 134, in forward
+    return F.linear(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

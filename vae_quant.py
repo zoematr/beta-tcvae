@@ -3,6 +3,10 @@ import time
 import math
 from numbers import Number
 import argparse
+try:
+    import wandb
+except ImportError:
+    wandb = None
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -382,7 +386,17 @@ def main():
     parser.add_argument('--save', default='test1')
     parser.add_argument('--log_freq', default=200, type=int, help='num iterations per log')
     parser.add_argument('--workers', type=int, default=0, help='DataLoader workers (0 on macOS to avoid pickling issues)')
+    parser.add_argument('--wandb', action='store_true')
+    parser.add_argument('--wandb_project', default='beta-tcvae')
+    parser.add_argument('--wandb_entity', default=None)
+    parser.add_argument('--wandb_run_name', default=None)
+    parser.add_argument('--wandb_mode', default='online')
     args = parser.parse_args()
+
+    if wandb and args.wandb:
+        wandb.init(project=args.wandb_project, entity=args.wandb_entity,
+                   name=args.wandb_run_name, mode=args.wandb_mode, config=vars(args))
+        wandb.summary['batch_size'] = args.batch_size
 
     # Select device safely
     if torch.cuda.is_available():
@@ -487,6 +501,7 @@ def main():
     dataset_loader = DataLoader(train_loader.dataset, batch_size=1000, num_workers=0, shuffle=False)
     logpx, dependence, information, dimwise_kl, analytical_cond_kl, marginal_entropies, joint_entropy = \
         elbo_decomposition(vae, dataset_loader)
+    wandb.summary['TC'] = dependence
     torch.save({
         'logpx': logpx,
         'dependence': dependence,
@@ -497,7 +512,8 @@ def main():
         'joint_entropy': joint_entropy
     }, os.path.join(args.save, 'elbo_decomposition.pth'))
     eval('plot_vs_gt_' + args.dataset)(vae, dataset_loader.dataset, os.path.join(args.save, 'gt_vs_latent.png'))
-    return vae
+    if wandb and args.wandb:
+        wandb.finish()
 
 if __name__ == '__main__':
-    model = main()
+    main()

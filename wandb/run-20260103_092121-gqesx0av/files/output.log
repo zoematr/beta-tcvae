@@ -1,0 +1,41 @@
+[iteration 050] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -561.0732 (-1129.8158)
+Active units: 0,1,2,4,5,6,7,8,9
+Number of active units: 9/10
+[iteration 100] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -500.4945 (-629.2205)
+Active units: 1,2,3,4,5,6,7,9
+Number of active units: 8/10
+[iteration 150] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -397.9630 (-463.1957)
+Active units: 0,1,2,3,4,5,6,7,8,9
+Number of active units: 10/10
+[iteration 200] time: 0.05 	beta 6.00 	lambda 0.00 training ELBO: -291.3081 (-360.7789)
+Active units: 0,1,3,9
+Number of active units: 4/10
+[iteration 250] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -251.3776 (-289.8069)
+Active units: 1,7,9
+Number of active units: 3/10
+[iteration 300] time: 0.07 	beta 6.00 	lambda 0.00 training ELBO: -237.0082 (-254.0739)
+Active units: 0,1,4,6,9
+Number of active units: 5/10
+[iteration 350] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -214.8572 (-233.6344)
+Active units: 1,7,9
+Number of active units: 3/10
+Traceback (most recent call last):
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 520, in <module>
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 473, in main
+    optimizer.step()
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/optim/optimizer.py", line 517, in wrapper
+    out = func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/optim/optimizer.py", line 82, in _use_grad
+    ret = func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/optim/adam.py", line 247, in step
+    adam(
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/optim/optimizer.py", line 150, in maybe_fallback
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/optim/adam.py", line 953, in adam
+    func(
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/optim/adam.py", line 447, in _single_tensor_adam
+    exp_avg.lerp_(grad, 1 - device_beta1)
+KeyboardInterrupt

@@ -217,7 +217,21 @@ if __name__ == '__main__':
         return vae, loader, args
 
     z_inds = list(map(int, args.zs.split(','))) if args.zs is not None else None
-    torch.cuda.set_device(args.gpu)
+    
+    if torch.cuda.is_available():
+        torch.cuda.set_device(args.gpu)
+        device = torch.device(f'cuda:{args.gpu}')
+        pin_memory = True
+        use_cuda_flag = True
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = torch.device('mps')
+        pin_memory = False
+        use_cuda_flag = False
+    else:
+        device = torch.device('cpu')
+        pin_memory = False
+        use_cuda_flag = False
+
     vae, dataset_loader, cpargs = load_model_and_dataset(args.checkpt)
     if args.elbo_decomp:
         elbo_decomposition(vae, dataset_loader)

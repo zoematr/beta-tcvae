@@ -199,7 +199,20 @@ if __name__ == '__main__':
         loader = setup_data_loaders(args, use_cuda=True)
         return vae, loader
 
-    torch.cuda.set_device(args.gpu)
+    if torch.cuda.is_available():
+        torch.cuda.set_device(args.gpu)
+        device = torch.device(f'cuda:{args.gpu}')
+        pin_memory = True
+        use_cuda_flag = True
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = torch.device('mps')
+        pin_memory = False
+        use_cuda_flag = False
+    else:
+        device = torch.device('cpu')
+        pin_memory = False
+        use_cuda_flag = False
+        
     vae, dataset_loader = load_model_and_dataset(args.checkpt)
     logpx, dependence, information, dimwise_kl, analytical_cond_kl, marginal_entropies, joint_entropy = \
         elbo_decomposition(vae, dataset_loader)
