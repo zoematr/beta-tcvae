@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 528, in <module>
+    main()
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 477, in main
+    obj, elbo = vae.elbo(x, dataset_size, mws_batch_size)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 262, in elbo
+    (logqz_condx - logqz) - \
+     ~~~~~~~~~~~~^~~~~~~
+RuntimeError: The size of tensor a (64) must match the size of tensor b (16) at non-singleton dimension 0

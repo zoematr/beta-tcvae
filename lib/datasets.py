@@ -42,4 +42,3 @@ class Faces(Dataset):
 
     def __init__(self):
         return super(Faces, self).__init__(self.LOC)
-

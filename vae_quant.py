@@ -179,9 +179,12 @@ class VAE(nn.Module):
     # define the guide (i.e. variational distribution) q(z|x)
     def encode(self, x):
         x = x.view(x.size(0), 1, 64, 64)
-        # use the encoder to get the parameters used to define q(z|x)
         z_params = self.encoder.forward(x).view(x.size(0), self.z_dim, self.q_dist.nparams)
-        # sample the latent code z
+        # Stabilize: clamp log-variance to a safe range
+        if self.q_dist.nparams == 2:
+            mu = z_params[..., 0]
+            logvar = z_params[..., 1].clamp(min=-10.0, max=10.0)  # avoid huge std/inf
+            z_params = torch.stack((mu, logvar), dim=-1)
         zs = self.q_dist.sample(params=z_params)
         return zs, z_params
 
@@ -206,37 +209,31 @@ class VAE(nn.Module):
         W[M-1, 0] = strat_weight
         return W.log()
 
-    def elbo(self, x, dataset_size):
-        # log p(x|z) + log p(z) - log q(z|x)
+    def elbo(self, x, dataset_size, mws_batch_size):
+        # Optimizer minibatch (B)
         batch_size = x.size(0)
         x = x.view(batch_size, 1, 64, 64)
         prior_params = self._get_prior_params(batch_size)
         x_recon, x_params, zs, z_params = self.reconstruct_img(x)
+
+        #Normal VAE terms (use B)
         logpx = self.x_dist.log_density(x, params=x_params).view(batch_size, -1).sum(1)
         logpz = self.prior_dist.log_density(zs, params=prior_params).view(batch_size, -1).sum(1)
         logqz_condx = self.q_dist.log_density(zs, params=z_params).view(batch_size, -1).sum(1)
-
         elbo = logpx + logpz - logqz_condx
-
+        print("ERROR: LOGQZ-CONDX", logqz_condx)
         if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
             return elbo, elbo.detach()
 
-        # compute log q(z) ~= log 1/(NM) sum_m=1^M q(z|x_m) = - log(MN) + logsumexp_m(q(z|x_m))
+        #MWS estimator (use subset size M <= B from the SAME minibatch)
+        M = batch_size if (mws_batch_size is None) else min(mws_batch_size, batch_size)
+        col_idx = torch.randperm(batch_size, device=zs.device)[:M]
         _logqz = self.q_dist.log_density(
             zs.view(batch_size, 1, self.z_dim),
-            z_params.view(1, batch_size, self.z_dim, self.q_dist.nparams)
-        )
-
-        if not self.mss:
-            # minibatch weighted sampling
-            logqz_prodmarginals = (logsumexp(_logqz, dim=1, keepdim=False) - math.log(batch_size * dataset_size)).sum(1)
-            logqz = (logsumexp(_logqz.sum(2), dim=1, keepdim=False) - math.log(batch_size * dataset_size))
-        else:
-            # minibatch stratified sampling
-            logiw_matrix = Variable(self._log_importance_weight_matrix(batch_size, dataset_size).type_as(_logqz.data))
-            logqz = logsumexp(logiw_matrix + _logqz.sum(2), dim=1, keepdim=False)
-            logqz_prodmarginals = logsumexp(
-                logiw_matrix.view(batch_size, batch_size, 1) + _logqz, dim=1, keepdim=False).sum(1)
+            z_params[col_idx].view(1, M, self.z_dim, self.q_dist.nparams)
+        )  # (B, M, z_dim)
+        logqz_prodmarginals = (logsumexp(_logqz, dim=1) - math.log(M * dataset_size)).sum(1)  # (B,)
+        logqz = (logsumexp(_logqz.sum(2), dim=1) - math.log(M * dataset_size))                # (B,)
 
         if not self.tcvae:
             if self.include_mutinfo:
@@ -372,6 +369,7 @@ def main():
     parser.add_argument('-dist', default='normal', type=str, choices=['normal', 'laplace', 'flow'])
     parser.add_argument('-n', '--num-epochs', default=50, type=int, help='number of training epochs')
     parser.add_argument('-b', '--batch-size', default=2048, type=int, help='batch size')
+    parser.add_argument('-mws', '--mws-batch-size', default=2048, type=int, help='batch size for the Minibatch Weighted Sampling estimation')
     parser.add_argument('-l', '--learning-rate', default=1e-3, type=float, help='learning rate')
     parser.add_argument('-z', '--latent-dim', default=10, type=int, help='size of latent dimension')
     parser.add_argument('--beta', default=1, type=float, help='ELBO penalty term')
@@ -449,36 +447,37 @@ def main():
 
     # training loop
     dataset_size = len(train_loader.dataset)
-    #num_iterations = len(train_loader) * args.num_epochs
-    num_iterations = 3
+    num_iterations = len(train_loader) * args.num_epochs
+    mws_batch_size = args.mws_batch_size
+    #num_iterations = 100
     iteration = 0
-    # initialize loss accumulator
     logging.info("init loss accumulator")
     elbo_running_mean = utils.RunningAverageMeter()
     while iteration < num_iterations:
         for i, x in enumerate(train_loader):
-            iteration += 1
+
+            if iteration >= num_iterations:
+                break
+
             batch_time = time.time()
             vae.train()
             anneal_kl(args, vae, iteration)
             optimizer.zero_grad()
-            # transfer to device
             x = x.to(device, non_blocking=True)
-            # do ELBO gradient and accumulate loss
-            obj, elbo = vae.elbo(x, dataset_size)
+            obj, elbo = vae.elbo(x, dataset_size, mws_batch_size)
             if utils.isnan(obj).any():
                 raise ValueError('NaN spotted in objective.')
             obj.mean().mul(-1).backward()
             elbo_running_mean.update(elbo.mean().item())
             optimizer.step()
 
-            # report training diagnostics
+            iteration += 1
+
             if iteration % args.log_freq == 0:
                 train_elbo.append(elbo_running_mean.avg)
                 print('[iteration %03d] time: %.2f \tbeta %.2f \tlambda %.2f training ELBO: %.4f (%.4f)' % (
                     iteration, time.time() - batch_time, vae.beta, vae.lamb,
                     elbo_running_mean.val, elbo_running_mean.avg))
-
                 vae.eval()
 
                 # plot training and test ELBOs

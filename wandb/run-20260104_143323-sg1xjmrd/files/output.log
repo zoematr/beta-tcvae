@@ -1,0 +1,117 @@
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+[iteration 050] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -585.6080 (-1134.3237)
+Active units: 0,6,7,8,9
+Number of active units: 5/10
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+batch size: 64
+[iteration 100] time: 0.06 	beta 6.00 	lambda 0.00 training ELBO: -552.3158 (-681.7937)
+Active units: 1,2,3,4,5,6,7,8
+Number of active units: 8/10
+Computing q(z|x) distributions.
+Sampling from q(z).
+Estimating entropies.
+100%|████████████████████████████████████████████████████████████████████████| 10000/10000 [1:23:04<00:00,  2.01it/s]
+Dependence: 0.6352806091308594
+Information: 1.5063629150390625
+Dimension-wise KL: 1.1808196306228638
+Analytical E_p(x)[ KL(q(z|x)||p(z)) ]: 3.3224618434906006
+Estimated  ELBO: -511.14379740291173
+Active units: 1,2,3,4,5,6,7,8
+Number of active units: 8/10
