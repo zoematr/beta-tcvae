@@ -1,0 +1,11 @@
+Computing q(z|x) distributions.
+Sampling from q(z).
+Estimating entropies.
+100%|██████████████████████████████████████████████████████████████████████████| 10000/10000 [18:43<00:00,  8.90it/s]
+Dependence: 0.10849761962890625
+Information: 0.4332084655761719
+Dimension-wise KL: 2.0816402435302734
+Analytical E_p(x)[ KL(q(z|x)||p(z)) ]: 2.623347043991089
+Estimated  ELBO: -1058.500353023741
+Active units: 0,1,5,7
+Number of active units: 4/10

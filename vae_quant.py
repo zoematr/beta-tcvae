@@ -372,6 +372,7 @@ def main():
     parser.add_argument('-dist', default='normal', type=str, choices=['normal', 'laplace', 'flow'])
     parser.add_argument('-n', '--num-epochs', default=50, type=int, help='number of training epochs')
     parser.add_argument('-b', '--batch-size', default=2048, type=int, help='batch size')
+    parser.add_argument('-mws', '--mws-batch-size', default=2048, type=int, help='batch size for the Minibatch Weighted Sampling estimation')
     parser.add_argument('-l', '--learning-rate', default=1e-3, type=float, help='learning rate')
     parser.add_argument('-z', '--latent-dim', default=10, type=int, help='size of latent dimension')
     parser.add_argument('--beta', default=1, type=float, help='ELBO penalty term')
@@ -452,11 +453,14 @@ def main():
     #num_iterations = len(train_loader) * args.num_epochs
     num_iterations = 3
     iteration = 0
+    mws_batch_size = args.mws_batch_size
     # initialize loss accumulator
     logging.info("init loss accumulator")
     elbo_running_mean = utils.RunningAverageMeter()
     while iteration < num_iterations:
         for i, x in enumerate(train_loader):
+            if iteration >= num_iterations:
+                break
             iteration += 1
             batch_time = time.time()
             vae.train()
