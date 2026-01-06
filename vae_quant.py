@@ -1,4 +1,6 @@
-import os
+import os, random
+import numpy as np
+import torch
 import time
 import math
 from numbers import Number
@@ -392,7 +394,24 @@ def main():
     parser.add_argument('--wandb_entity', default=None)
     parser.add_argument('--wandb_run_name', default=None)
     parser.add_argument('--wandb_mode', default='online')
+    parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
+
+    def set_seed(seed: int):
+        os.environ['PYTHONHASHSEED'] = str(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+        try:
+            torch.use_deterministic_algorithms(True)
+        except Exception:
+            pass
+
+    set_seed(args.seed)
 
     if wandb and args.wandb:
         wandb.init(project=args.wandb_project, entity=args.wandb_entity,
@@ -451,7 +470,7 @@ def main():
     # training loop
     dataset_size = len(train_loader.dataset)
     #num_iterations = len(train_loader) * args.num_epochs
-    num_iterations = 3
+    num_iterations = 100000
     iteration = 0
     mws_batch_size = args.mws_batch_size
     # initialize loss accumulator

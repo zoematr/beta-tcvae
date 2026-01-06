@@ -1,0 +1,9 @@
+{"time":"2026-01-06T09:09:04.822666+01:00","level":"INFO","msg":"stream: starting","core version":"0.23.1"}
+{"time":"2026-01-06T09:09:05.143108+01:00","level":"INFO","msg":"stream: created new stream","id":"mt4xpidj"}
+{"time":"2026-01-06T09:09:05.143425+01:00","level":"INFO","msg":"handler: started","stream_id":"mt4xpidj"}
+{"time":"2026-01-06T09:09:05.143511+01:00","level":"INFO","msg":"writer: started","stream_id":"mt4xpidj"}
+{"time":"2026-01-06T09:09:05.143533+01:00","level":"INFO","msg":"stream: started","id":"mt4xpidj"}
+{"time":"2026-01-06T09:09:05.143907+01:00","level":"INFO","msg":"sender: started","stream_id":"mt4xpidj"}
+{"time":"2026-01-06T09:48:38.91359+01:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/vae-seminar/beta-tcvae/mt4xpidj/file_stream\": dial tcp: lookup api.wandb.ai: no such host"}
+{"time":"2026-01-06T09:48:41.257963+01:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/vae-seminar/beta-tcvae/mt4xpidj/file_stream\": dial tcp: lookup api.wandb.ai: no such host"}
+{"time":"2026-01-06T09:48:45.99402+01:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/vae-seminar/beta-tcvae/mt4xpidj/file_stream\": dial tcp: lookup api.wandb.ai: no such host"}
