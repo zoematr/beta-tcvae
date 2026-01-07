@@ -270,7 +270,6 @@ class VAE(nn.Module):
                 modified_elbo = logpx - \
                     self.beta * (logqz - logqz_prodmarginals) - \
                     (1 - self.lamb) * (logqz_prodmarginals - logpz)
-        print("shape elbo", modified_elbo.shape)
         return modified_elbo, elbo.detach()
 
 
