@@ -210,51 +210,48 @@ class VAE(nn.Module):
         W[M-1, 0] = strat_weight
         return W.log()
 
-    def elbo(self, x, dataset_size, train_batch_size, mws_batch_size):
-        # Optimizer minibatch (rows, Btr) and MWS minibatch (cols, Btc)
-        Bmax = x.size(0)
-        x = x.view(Bmax, 1, 64, 64)
-
-        prior_params_full = self._get_prior_params(Bmax)
+    def elbo(self, x, dataset_size):
+        # log p(x|z) + log p(z) - log q(z|x)
+        batch_size = x.size(0)
+        x = x.view(batch_size, 1, 64, 64)
+        prior_params = self._get_prior_params(batch_size)
         x_recon, x_params, zs, z_params = self.reconstruct_img(x)
+        logpx = self.x_dist.log_density(x, params=x_params).view(batch_size, -1).sum(1)
+        logpz = self.prior_dist.log_density(zs, params=prior_params).view(batch_size, -1).sum(1)
+        logqz_condx = self.q_dist.log_density(zs, params=z_params).view(batch_size, -1).sum(1)
 
-        Btr = min(train_batch_size, Bmax)
-        Btc = min(mws_batch_size if mws_batch_size is not None else Btr, Bmax)
-
-        # Normal VAE terms (use rows: first Btr examples)
-        logpx_full = self.x_dist.log_density(x, params=x_params).view(Bmax, -1).sum(1)
-        logpz_full = self.prior_dist.log_density(zs, params=prior_params_full).view(Bmax, -1).sum(1)
-        logqz_condx_full = self.q_dist.log_density(zs, params=z_params).view(Bmax, -1).sum(1)
-
-        logpx = logpx_full[:Btr]
-        logpz = logpz_full[:Btr]
-        logqz_condx = logqz_condx_full[:Btr]
-        elbo_rows = logpx + logpz - logqz_condx
+        elbo = logpx + logpz - logqz_condx
 
         if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
-            return elbo_rows, elbo_rows.detach()
+            return elbo, elbo.detach()
 
-        # MWS
-        zs_rows = zs[:Btr]
-        z_params_cols = z_params[:Btc]
-
+        # compute log q(z) ~= log 1/(NM) sum_m=1^M q(z|x_m) = - log(MN) + logsumexp_m(q(z|x_m))
         _logqz = self.q_dist.log_density(
-            zs_rows.view(Btr, 1, self.z_dim),
-            z_params_cols.view(1, Btc, self.z_dim, self.q_dist.nparams)
-        )  # (Btr, Btc, z_dim)
+            zs.view(batch_size, 1, self.z_dim),
+            z_params.view(1, batch_size, self.z_dim, self.q_dist.nparams)
+        )
 
-        # product of marginals and joint terms for the Btr rows, estimated with Btc columns
-        logqz_prodmarginals = (logsumexp(_logqz, dim=1) - math.log(Btc * dataset_size)).sum(1)   # (Btr,)
-        logqz = (logsumexp(_logqz.sum(2), dim=1) - math.log(Btc * dataset_size))                 # (Btr,)
+        if not self.mss:
+            # minibatch weighted sampling
+            logqz_prodmarginals = (logsumexp(_logqz, dim=1, keepdim=False) - math.log(batch_size * dataset_size)).sum(1)
+            logqz = (logsumexp(_logqz.sum(2), dim=1, keepdim=False) - math.log(batch_size * dataset_size))
+        else:
+            # minibatch stratified sampling
+            logiw_matrix = Variable(self._log_importance_weight_matrix(batch_size, dataset_size).type_as(_logqz.data))
+            logqz = logsumexp(logiw_matrix + _logqz.sum(2), dim=1, keepdim=False)
+            logqz_prodmarginals = logsumexp(
+                logiw_matrix.view(batch_size, batch_size, 1) + _logqz, dim=1, keepdim=False).sum(1)
 
         if not self.tcvae:
             if self.include_mutinfo:
                 modified_elbo = logpx - self.beta * (
-                    (logqz_condx - logpz) - self.lamb * (logqz_prodmarginals - logpz)
+                    (logqz_condx - logpz) -
+                    self.lamb * (logqz_prodmarginals - logpz)
                 )
             else:
                 modified_elbo = logpx - self.beta * (
-                    (logqz - logqz_prodmarginals) + (1 - self.lamb) * (logqz_prodmarginals - logpz)
+                    (logqz - logqz_prodmarginals) +
+                    (1 - self.lamb) * (logqz_prodmarginals - logpz)
                 )
         else:
             if self.include_mutinfo:
@@ -267,7 +264,7 @@ class VAE(nn.Module):
                     self.beta * (logqz - logqz_prodmarginals) - \
                     (1 - self.lamb) * (logqz_prodmarginals - logpz)
 
-        return modified_elbo, elbo_rows.detach()
+        return modified_elbo, elbo.detach()
 
 
 def logsumexp(value, dim=None, keepdim=False):
@@ -477,10 +474,9 @@ def main():
 
     # training loop
     dataset_size = len(train_loader.dataset)
-    #num_iterations = len(train_loader) * args.num_epochs
+    num_iterations = len(train_loader) * args.num_epochs
     mws_batch_size = args.mws_batch_size
     batch_size = args.batch_size
-    num_iterations = 100
     iteration = 0
     logging.info("init loss accumulator")
     elbo_running_mean = utils.RunningAverageMeter()
