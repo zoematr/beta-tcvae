@@ -232,7 +232,6 @@ class VAE(nn.Module):
             zs_sub.view(mws_batch_size, 1, self.z_dim),
             z_params_sub.view(1, mws_batch_size, self.z_dim, self.q_dist.nparams)
         ) 
-        print("z_params_sub.shape", z_params_sub.shape, "logqz.shape", _logqz.shape)
         #[32, 32, 10]
 
         if not self.mss:
@@ -271,7 +270,7 @@ class VAE(nn.Module):
                 modified_elbo = logpx - \
                     self.beta * (logqz - logqz_prodmarginals) - \
                     (1 - self.lamb) * (logqz_prodmarginals - logpz)
-
+        print("shape elbo", modified_elbo.shape)
         return modified_elbo, elbo.detach()
 
 
