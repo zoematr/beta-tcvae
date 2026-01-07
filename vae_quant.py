@@ -239,7 +239,9 @@ class VAE(nn.Module):
             # minibatch weighted sampling
             logqz_prodmarginals = (logsumexp(_logqz, dim=1, keepdim=False) - math.log(mws_batch_size * dataset_size)).sum(1)
             logqz = (logsumexp(_logqz.sum(2), dim=1, keepdim=False) - math.log(mws_batch_size * dataset_size))
-            print("logqz_prodmarginals.shape", logqz_prodmarginals.shape, "logqz.shape", logqz.shape)
+            logpx = logpx[:mws_batch_size]
+            logqz_condx = logqz_condx[:mws_batch_size]
+            logpz = logpz[:mws_batch_size]
 
         else:
             # minibatch stratified sampling
