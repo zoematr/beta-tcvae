@@ -229,8 +229,8 @@ class VAE(nn.Module):
 
         # compute log q(z) ~= log 1/(NM) sum_m=1^M q(z|x_m) = - log(MN) + logsumexp_m(q(z|x_m))
         _logqz = self.q_dist.log_density(
-            zs.view(batch_size, 1, self.z_dim),
-            z_params.view(1, batch_size, self.z_dim, self.q_dist.nparams)
+            zs.view(mws_batch_size, 1, self.z_dim),
+            z_params.view(1, mws_batch_size, self.z_dim, self.q_dist.nparams)
         )
         print("_logqz", _logqz.shape)
 
