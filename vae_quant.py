@@ -5,10 +5,7 @@ import time
 import math
 from numbers import Number
 import argparse
-try:
-    import wandb
-except ImportError:
-    wandb = None
+import wandb
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -419,11 +416,30 @@ def main():
         wandb.summary['batch_size'] = args.batch_size
 
     # Select device safely
-    if torch.cuda.is_available():
-        torch.cuda.set_device(args.gpu)
-        device = torch.device(f'cuda:{args.gpu}')
-        pin_memory = True
-        use_cuda_flag = True
+    if args.gpu < 0:
+        device = torch.device('cpu')
+        pin_memory = False
+        use_cuda_flag = False
+    elif torch.cuda.is_available():
+        # Check compute capability; fallback to CPU if unsupported by this PyTorch build.
+        try:
+            cap = torch.cuda.get_device_capability(args.gpu)  # (major, minor)
+            supported_sms = {(5, 0), (6, 0), (7, 0), (7, 5), (8, 0), (8, 6), (9, 0)}
+            if cap not in supported_sms:
+                print(f'Warning: CUDA sm_{cap[0]}{cap[1]} not supported by this PyTorch build; using CPU.')
+                device = torch.device('cpu')
+                pin_memory = False
+                use_cuda_flag = False
+            else:
+                torch.cuda.set_device(args.gpu)
+                device = torch.device(f'cuda:{args.gpu}')
+                pin_memory = True
+                use_cuda_flag = True
+        except Exception as e:
+            print(f'Warning: CUDA device check failed ({e}); using CPU.')
+            device = torch.device('cpu')
+            pin_memory = False
+            use_cuda_flag = False
     elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
         device = torch.device('mps')
         pin_memory = False
