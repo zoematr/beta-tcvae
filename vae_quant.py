@@ -224,6 +224,9 @@ class VAE(nn.Module):
         print("elbo", elbo, elbo.shape)
         if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
             return elbo, elbo.detach()
+        
+        zs_sub = zs[:mws_batch_size]
+        print("zs_sub.shape", zs_sub.shape)
 
         _logqz = self.q_dist.log_density(
             zs.view(batch_size, 1, self.z_dim),
