@@ -231,21 +231,11 @@ class VAE(nn.Module):
         ) #[1024, 1024, 10]
 
 
-        zs_subset = zs[:mws_batch_size]           
-        print("zs subset", zs_subset.shape)# Shape: [32, 10]
-        params_subset = z_params[:mws_batch_size]
-        print("params subset", params_subset.shape)# Shape: [32, 10, nparams]
-
-        _logqz = self.q_dist.log_density(
-            zs_subset.view(mws_batch_size, 1, self.z_dim), 
-            params_subset.view(1, mws_batch_size, self.z_dim, self.q_dist.nparams)
-        )
-        print("_logqz subset", _logqz.shape)
-
         if not self.mss:
             # minibatch weighted sampling
             logqz_prodmarginals = (logsumexp(_logqz, dim=1, keepdim=False) - math.log(batch_size * dataset_size)).sum(1)
             logqz = (logsumexp(_logqz.sum(2), dim=1, keepdim=False) - math.log(batch_size * dataset_size))
+            print("logqz_prodmarginals.shape", logqz_prodmarginals.shape, "logqz.shape", logqz.shape)
         else:
             # minibatch stratified sampling
             logiw_matrix = Variable(self._log_importance_weight_matrix(batch_size, dataset_size).type_as(_logqz.data))
