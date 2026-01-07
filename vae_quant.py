@@ -232,7 +232,7 @@ class VAE(nn.Module):
 
 
         zs_subset = zs[:mws_batch_size]           
-        print("zs subset", zs.shape)# Shape: [32, 10]
+        print("zs subset", zs_subset.shape)# Shape: [32, 10]
         params_subset = z_params[:mws_batch_size]
         print("params subset", params_subset.shape)# Shape: [32, 10, nparams]
 
