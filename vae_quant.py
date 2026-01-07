@@ -488,7 +488,6 @@ def main():
     elbo_running_mean = utils.RunningAverageMeter()
     while iteration < num_iterations:
         for i, x in enumerate(train_loader):
-            print("running", iteration)
             if iteration >= num_iterations:
                 break
 
