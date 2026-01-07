@@ -210,18 +210,20 @@ class VAE(nn.Module):
         W[M-1, 0] = strat_weight
         return W.log()
 
-    def elbo(self, x, dataset_size):
+    def elbo(self, x, dataset_size, mws_batch_size):
         # log p(x|z) + log p(z) - log q(z|x)
-        batch_size = x.size(0)
-        x = x.view(batch_size, 1, 64, 64)
-        prior_params = self._get_prior_params(batch_size)
+        batch_size = x.size(0) 
+        x = x.view(batch_size, 1, 64, 64) #reshape input to image
+        prior_params = self._get_prior_params(batch_size) 
         x_recon, x_params, zs, z_params = self.reconstruct_img(x)
         logpx = self.x_dist.log_density(x, params=x_params).view(batch_size, -1).sum(1)
         logpz = self.prior_dist.log_density(zs, params=prior_params).view(batch_size, -1).sum(1)
         logqz_condx = self.q_dist.log_density(zs, params=z_params).view(batch_size, -1).sum(1)
-
+        print("logpx",logpx.shape)
+        print("logpz",logpz.shape)
+        print("logqz_condx",logqz_condx.shape)
         elbo = logpx + logpz - logqz_condx
-
+        print("elbo", elbo, elbo.shape)
         if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
             return elbo, elbo.detach()
 
@@ -230,6 +232,7 @@ class VAE(nn.Module):
             zs.view(batch_size, 1, self.z_dim),
             z_params.view(1, batch_size, self.z_dim, self.q_dist.nparams)
         )
+        print("_logqz", _logqz.shape)
 
         if not self.mss:
             # minibatch weighted sampling
@@ -491,7 +494,7 @@ def main():
             anneal_kl(args, vae, iteration)
             optimizer.zero_grad()
             x = x.to(device, non_blocking=True)
-            obj, elbo = vae.elbo(x, dataset_size, batch_size, mws_batch_size)
+            obj, elbo = vae.elbo(x, dataset_size, mws_batch_size)
             if utils.isnan(obj).any():
                 raise ValueError('NaN spotted in objective.')
             obj.mean().mul(-1).backward()
