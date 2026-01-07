@@ -216,23 +216,31 @@ class VAE(nn.Module):
         x = x.view(batch_size, 1, 64, 64) #reshape input to image
         prior_params = self._get_prior_params(batch_size) 
         x_recon, x_params, zs, z_params = self.reconstruct_img(x)
-        logpx = self.x_dist.log_density(x, params=x_params).view(batch_size, -1).sum(1)
-        logpz = self.prior_dist.log_density(zs, params=prior_params).view(batch_size, -1).sum(1)
-        logqz_condx = self.q_dist.log_density(zs, params=z_params).view(batch_size, -1).sum(1)
-        print("logpx",logpx.shape)
-        print("logpz",logpz.shape)
-        print("logqz_condx",logqz_condx.shape)
-        elbo = logpx + logpz - logqz_condx
+        logpx = self.x_dist.log_density(x, params=x_params).view(batch_size, -1).sum(1) #[1024]
+        logpz = self.prior_dist.log_density(zs, params=prior_params).view(batch_size, -1).sum(1)  #[1024]
+        logqz_condx = self.q_dist.log_density(zs, params=z_params).view(batch_size, -1).sum(1)  #[1024]
+
+        elbo = logpx + logpz - logqz_condx  #[1024]
         print("elbo", elbo, elbo.shape)
         if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
             return elbo, elbo.detach()
 
-        # compute log q(z) ~= log 1/(NM) sum_m=1^M q(z|x_m) = - log(MN) + logsumexp_m(q(z|x_m))
         _logqz = self.q_dist.log_density(
-            zs.view(mws_batch_size, 1, self.z_dim),
-            z_params.view(1, mws_batch_size, self.z_dim, self.q_dist.nparams)
+            zs.view(batch_size, 1, self.z_dim),
+            z_params.view(1, batch_size, self.z_dim, self.q_dist.nparams)
+        ) #[1024, 1024, 10]
+
+
+        zs_subset = zs[:mws_batch_size]           
+        print("zs subset", zs.shape)# Shape: [32, 10]
+        params_subset = z_params[:mws_batch_size]
+        print("params subset", params_subset.shape)# Shape: [32, 10, nparams]
+
+        _logqz = self.q_dist.log_density(
+            zs_subset.view(mws_batch_size, 1, self.z_dim), 
+            params_subset.view(1, mws_batch_size, self.z_dim, self.q_dist.nparams)
         )
-        print("_logqz", _logqz.shape)
+        print("_logqz subset", _logqz.shape)
 
         if not self.mss:
             # minibatch weighted sampling
