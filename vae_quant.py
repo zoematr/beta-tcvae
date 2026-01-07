@@ -1,4 +1,4 @@
-import os
+import os, random, numpy as np, torch
 import time
 import math
 from numbers import Number
@@ -11,7 +11,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import visdom
-import wandb
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import logging
@@ -22,6 +21,8 @@ from lib.flows import FactorialNormalizingFlow
 
 from elbo_decomposition import elbo_decomposition
 from plot_latent_vs_true import plot_vs_gt_shapes, plot_vs_gt_faces  # noqa: F401
+from disentanglement_metrics import mutual_info_metric_shapes, mutual_info_metric_faces
+
 
 
 class MLPEncoder(nn.Module):
@@ -209,42 +210,51 @@ class VAE(nn.Module):
         W[M-1, 0] = strat_weight
         return W.log()
 
-    def elbo(self, x, dataset_size, mws_batch_size):
-        # Optimizer minibatch (B)
-        batch_size = x.size(0)
-        x = x.view(batch_size, 1, 64, 64)
-        prior_params = self._get_prior_params(batch_size)
+    def elbo(self, x, dataset_size, train_batch_size, mws_batch_size):
+        # Optimizer minibatch (rows, Btr) and MWS minibatch (cols, Btc)
+        Bmax = x.size(0)
+        x = x.view(Bmax, 1, 64, 64)
+
+        prior_params_full = self._get_prior_params(Bmax)
         x_recon, x_params, zs, z_params = self.reconstruct_img(x)
 
-        #Normal VAE terms (use B)
-        logpx = self.x_dist.log_density(x, params=x_params).view(batch_size, -1).sum(1)
-        logpz = self.prior_dist.log_density(zs, params=prior_params).view(batch_size, -1).sum(1)
-        logqz_condx = self.q_dist.log_density(zs, params=z_params).view(batch_size, -1).sum(1)
-        elbo = logpx + logpz - logqz_condx
-        print("ERROR: LOGQZ-CONDX", logqz_condx)
-        if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
-            return elbo, elbo.detach()
+        Btr = min(train_batch_size, Bmax)
+        Btc = min(mws_batch_size if mws_batch_size is not None else Btr, Bmax)
 
-        #MWS estimator (use subset size M <= B from the SAME minibatch)
-        M = batch_size if (mws_batch_size is None) else min(mws_batch_size, batch_size)
-        col_idx = torch.randperm(batch_size, device=zs.device)[:M]
+        # Normal VAE terms (use rows: first Btr examples)
+        logpx_full = self.x_dist.log_density(x, params=x_params).view(Bmax, -1).sum(1)
+        logpz_full = self.prior_dist.log_density(zs, params=prior_params_full).view(Bmax, -1).sum(1)
+        logqz_condx_full = self.q_dist.log_density(zs, params=z_params).view(Bmax, -1).sum(1)
+
+        logpx = logpx_full[:Btr]
+        logpz = logpz_full[:Btr]
+        logqz_condx = logqz_condx_full[:Btr]
+        elbo_rows = logpx + logpz - logqz_condx
+
+        if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
+            return elbo_rows, elbo_rows.detach()
+
+        # MWS
+        zs_rows = zs[:Btr]
+        z_params_cols = z_params[:Btc]
+
         _logqz = self.q_dist.log_density(
-            zs.view(batch_size, 1, self.z_dim),
-            z_params[col_idx].view(1, M, self.z_dim, self.q_dist.nparams)
-        )  # (B, M, z_dim)
-        logqz_prodmarginals = (logsumexp(_logqz, dim=1) - math.log(M * dataset_size)).sum(1)  # (B,)
-        logqz = (logsumexp(_logqz.sum(2), dim=1) - math.log(M * dataset_size))                # (B,)
+            zs_rows.view(Btr, 1, self.z_dim),
+            z_params_cols.view(1, Btc, self.z_dim, self.q_dist.nparams)
+        )  # (Btr, Btc, z_dim)
+
+        # product of marginals and joint terms for the Btr rows, estimated with Btc columns
+        logqz_prodmarginals = (logsumexp(_logqz, dim=1) - math.log(Btc * dataset_size)).sum(1)   # (Btr,)
+        logqz = (logsumexp(_logqz.sum(2), dim=1) - math.log(Btc * dataset_size))                 # (Btr,)
 
         if not self.tcvae:
             if self.include_mutinfo:
                 modified_elbo = logpx - self.beta * (
-                    (logqz_condx - logpz) -
-                    self.lamb * (logqz_prodmarginals - logpz)
+                    (logqz_condx - logpz) - self.lamb * (logqz_prodmarginals - logpz)
                 )
             else:
                 modified_elbo = logpx - self.beta * (
-                    (logqz - logqz_prodmarginals) +
-                    (1 - self.lamb) * (logqz_prodmarginals - logpz)
+                    (logqz - logqz_prodmarginals) + (1 - self.lamb) * (logqz_prodmarginals - logpz)
                 )
         else:
             if self.include_mutinfo:
@@ -257,7 +267,7 @@ class VAE(nn.Module):
                     self.beta * (logqz - logqz_prodmarginals) - \
                     (1 - self.lamb) * (logqz_prodmarginals - logpz)
 
-        return modified_elbo, elbo.detach()
+        return modified_elbo, elbo_rows.detach()
 
 
 def logsumexp(value, dim=None, keepdim=False):
@@ -368,8 +378,8 @@ def main():
         choices=['shapes', 'faces'])
     parser.add_argument('-dist', default='normal', type=str, choices=['normal', 'laplace', 'flow'])
     parser.add_argument('-n', '--num-epochs', default=50, type=int, help='number of training epochs')
-    parser.add_argument('-b', '--batch-size', default=2048, type=int, help='batch size')
-    parser.add_argument('-mws', '--mws-batch-size', default=2048, type=int, help='batch size for the Minibatch Weighted Sampling estimation')
+    parser.add_argument('-b', '--batch-size', default=1024, type=int, help='batch size')
+    parser.add_argument('-mws', '--mws-batch-size', default=1024, type=int, help='batch size for the Minibatch Weighted Sampling estimation')
     parser.add_argument('-l', '--learning-rate', default=1e-3, type=float, help='learning rate')
     parser.add_argument('-z', '--latent-dim', default=10, type=int, help='size of latent dimension')
     parser.add_argument('--beta', default=1, type=float, help='ELBO penalty term')
@@ -389,12 +399,18 @@ def main():
     parser.add_argument('--wandb_entity', default=None)
     parser.add_argument('--wandb_run_name', default=None)
     parser.add_argument('--wandb_mode', default='online')
+    parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
 
     if wandb and args.wandb:
         wandb.init(project=args.wandb_project, entity=args.wandb_entity,
                    name=args.wandb_run_name, mode=args.wandb_mode, config=vars(args))
-        wandb.summary['batch_size'] = args.batch_size
+        wandb.summary['mws_batch_size'] = args.mws_batch_size
+        wandb.summary['train_batch_size'] = args.batch_size
+        cfg = vars(args).copy()
+        cfg['train_batch_size'] = args.batch_size
+        cfg['mws_batch_size'] = args.mws_batch_size        
+
 
     # Select device safely
     if torch.cuda.is_available():
@@ -411,6 +427,22 @@ def main():
         pin_memory = False
         use_cuda_flag = False
 
+    def set_seed(seed: int):
+        os.environ['PYTHONHASHSEED'] = str(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        try:
+            torch.use_deterministic_algorithms(True)
+        except Exception:
+            pass
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+
+    set_seed(args.seed)
+
+    print ("mws", args.mws_batch_size, "train", args.batch_size)
     # data loader
     train_loader = setup_data_loaders(args, use_cuda=pin_memory)
     logging.info("loaded data")
@@ -447,9 +479,10 @@ def main():
 
     # training loop
     dataset_size = len(train_loader.dataset)
-    num_iterations = len(train_loader) * args.num_epochs
+    #num_iterations = len(train_loader) * args.num_epochs
     mws_batch_size = args.mws_batch_size
-    #num_iterations = 100
+    batch_size = args.batch_size
+    num_iterations = 100
     iteration = 0
     logging.info("init loss accumulator")
     elbo_running_mean = utils.RunningAverageMeter()
@@ -464,7 +497,7 @@ def main():
             anneal_kl(args, vae, iteration)
             optimizer.zero_grad()
             x = x.to(device, non_blocking=True)
-            obj, elbo = vae.elbo(x, dataset_size, mws_batch_size)
+            obj, elbo = vae.elbo(x, dataset_size, batch_size, mws_batch_size)
             if utils.isnan(obj).any():
                 raise ValueError('NaN spotted in objective.')
             obj.mean().mul(-1).backward()
@@ -501,6 +534,12 @@ def main():
     logpx, dependence, information, dimwise_kl, analytical_cond_kl, marginal_entropies, joint_entropy = \
         elbo_decomposition(vae, dataset_loader)
     wandb.summary['TC'] = dependence
+    wandb.summary['DKL'] = dimwise_kl
+    wandb.summary['MI'] = information
+    wandb.summary['logpx'] = logpx
+    wandb.summary['analytical_cond_kl'] = analytical_cond_kl
+    wandb.summary['joint_entropy'] = joint_entropy
+    
     torch.save({
         'logpx': logpx,
         'dependence': dependence,
@@ -510,6 +549,24 @@ def main():
         'marginal_entropies': marginal_entropies,
         'joint_entropy': joint_entropy
     }, os.path.join(args.save, 'elbo_decomposition.pth'))
+
+    # MIG computation
+    try:
+        if args.dataset == 'shapes' and mutual_info_metric_shapes:
+            mig = mutual_info_metric_shapes(vae, dataset_loader)
+        elif args.dataset == 'faces' and mutual_info_metric_faces:
+            mig = mutual_info_metric_faces(vae, dataset_loader)
+        else:
+            raise RuntimeError('MIG function not found in disentanglement_metrics.py')
+
+        mig_score = float(mig[0] if isinstance(mig, (tuple, list)) else mig)
+        print(f'[metrics] MIG: {mig_score:.4f}')
+        if wandb and args.wandb:
+            wandb.summary['MIG'] = mig_score
+        torch.save({'MIG': mig_score}, os.path.join(args.save, 'mig.pth'))
+    except Exception as e:
+        print(f'[metrics] MIG computation failed: {e}')
+
     eval('plot_vs_gt_' + args.dataset)(vae, dataset_loader.dataset, os.path.join(args.save, 'gt_vs_latent.png'))
     if wandb and args.wandb:
         wandb.finish()
