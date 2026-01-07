@@ -225,14 +225,15 @@ class VAE(nn.Module):
         if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
             return elbo, elbo.detach()
         
-        zs_sub = zs[:mws_batch_size]
-        print("zs_sub.shape", zs_sub.shape)
+        zs_sub = zs[:mws_batch_size] #[32,10]
 
+        z_params_sub = z_params[:mws_batch_size]
+        print("zs_sub.shape", zs_sub.shape, "z_params_sub.shape", z_params_sub.shape)
         _logqz = self.q_dist.log_density(
-            zs.view(batch_size, 1, self.z_dim),
-            z_params.view(1, batch_size, self.z_dim, self.q_dist.nparams)
-        ) #[1024, 1024, 10]
-
+            zs_sub.view(mws_batch_size, 1, self.z_dim),
+            z_params_sub.view(1, mws_batch_size, self.z_dim, self.q_dist.nparams)
+        ) 
+        print("_logqz",_logqz.shape)
 
         if not self.mss:
             # minibatch weighted sampling
