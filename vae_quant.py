@@ -441,8 +441,6 @@ def main():
         torch.backends.cudnn.deterministic = True
 
     set_seed(args.seed)
-
-    print ("mws", args.mws_batch_size, "train", args.batch_size)
     # data loader
     train_loader = setup_data_loaders(args, use_cuda=pin_memory)
     logging.info("loaded data")
