@@ -221,25 +221,25 @@ class VAE(nn.Module):
         logqz_condx = self.q_dist.log_density(zs, params=z_params).view(batch_size, -1).sum(1)  #[1024]
 
         elbo = logpx + logpz - logqz_condx  #[1024]
-        print("elbo", elbo, elbo.shape)
+
         if self.beta == 1 and self.include_mutinfo and self.lamb == 0:
             return elbo, elbo.detach()
         
         zs_sub = zs[:mws_batch_size] #[32,10]
 
         z_params_sub = z_params[:mws_batch_size]
-        print("zs_sub.shape", zs_sub.shape, "z_params_sub.shape", z_params_sub.shape)
         _logqz = self.q_dist.log_density(
             zs_sub.view(mws_batch_size, 1, self.z_dim),
             z_params_sub.view(1, mws_batch_size, self.z_dim, self.q_dist.nparams)
         ) 
-        print("_logqz",_logqz.shape)
+        #[32, 32, 10]
 
         if not self.mss:
             # minibatch weighted sampling
-            logqz_prodmarginals = (logsumexp(_logqz, dim=1, keepdim=False) - math.log(batch_size * dataset_size)).sum(1)
-            logqz = (logsumexp(_logqz.sum(2), dim=1, keepdim=False) - math.log(batch_size * dataset_size))
+            logqz_prodmarginals = (logsumexp(_logqz, dim=1, keepdim=False) - math.log(mws_batch_size * dataset_size)).sum(1)
+            logqz = (logsumexp(_logqz.sum(2), dim=1, keepdim=False) - math.log(mws_batch_size * dataset_size))
             print("logqz_prodmarginals.shape", logqz_prodmarginals.shape, "logqz.shape", logqz.shape)
+
         else:
             # minibatch stratified sampling
             logiw_matrix = Variable(self._log_importance_weight_matrix(batch_size, dataset_size).type_as(_logqz.data))
