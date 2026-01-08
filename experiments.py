@@ -8,10 +8,10 @@ subprocess.run([sys.executable, '-m', 'pip', 'show', 'torch'])
 DATASET = 'shapes'
 BETA = 6
 TCVAE = True
-NUM_EPOCHS = 20
+NUM_EPOCHS = 40
 LOG_FREQ = 50
 MWS_BATCH_SIZES = [32, 64, 256, 512, 1024]
-SEEDS = [0, 1, 2]
+SEEDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 # W&B
 USE_WANDB = True
