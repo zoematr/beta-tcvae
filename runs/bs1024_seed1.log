@@ -1,11 +1,8 @@
-usage: vae_quant.py [-h] [-d {shapes,faces}] [-dist {normal,laplace,flow}]
-                    [-n NUM_EPOCHS] [-b BATCH_SIZE] [-mws MWS_BATCH_SIZE]
-                    [-l LEARNING_RATE] [-z LATENT_DIM] [--beta BETA] [--tcvae]
-                    [--exclude-mutinfo] [--beta-anneal] [--lambda-anneal]
-                    [--mss] [--conv] [--gpu GPU] [--visdom] [--save SAVE]
-                    [--log_freq LOG_FREQ] [--workers WORKERS] [--wandb]
-                    [--wandb_project WANDB_PROJECT]
-                    [--wandb_entity WANDB_ENTITY]
-                    [--wandb_run_name WANDB_RUN_NAME]
-                    [--wandb_mode WANDB_MODE] [--seed SEED]
-vae_quant.py: error: unrecognized arguments: --tcvae--mws-batch-size 1024
+wandb: Currently logged in as: zoematr (vae-seminar) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run r6zmte3g
+wandb: Tracking run with wandb version 0.23.1
+wandb: Run data is saved locally in /Users/zoe/Desktop/VAEs/beta-tcvae/wandb/run-20260108_150648-r6zmte3g
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run mws-bs1024_seed1
+wandb: ⭐️ View project at https://wandb.ai/vae-seminar/beta-tcvae
+wandb: 🚀 View run at https://wandb.ai/vae-seminar/beta-tcvae/runs/r6zmte3g

@@ -21,7 +21,7 @@ from lib.flows import FactorialNormalizingFlow
 
 from elbo_decomposition import elbo_decomposition
 from plot_latent_vs_true import plot_vs_gt_shapes, plot_vs_gt_faces  # noqa: F401
-from disentanglement_metrics import mutual_info_metric_shapes, mutual_info_metric_faces
+from disentanglement_metrics import mutual_info_metric_shapes
 
 
 
@@ -485,8 +485,10 @@ def main():
     # training loop
     dataset_size = len(train_loader.dataset)
     num_iterations = len(train_loader) * args.num_epochs
+    num_iterations = 100
     mws_batch_size = args.mws_batch_size
     batch_size = args.batch_size
+
     iteration = 0
     logging.info("init loss accumulator")
     elbo_running_mean = utils.RunningAverageMeter()

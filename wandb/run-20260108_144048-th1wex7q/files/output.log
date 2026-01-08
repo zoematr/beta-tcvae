@@ -1,0 +1,3 @@
+[iteration 050] time: 0.31 	beta 6.00 	lambda 0.00 training ELBO: -526.1661 (-1110.0927)
+Active units: 0,1,2,3,5,8,9
+Number of active units: 7/10

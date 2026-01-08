@@ -8,7 +8,7 @@ subprocess.run([sys.executable, '-m', 'pip', 'show', 'torch'])
 DATASET = 'shapes'
 BETA = 6
 TCVAE = True
-NUM_EPOCHS = 30
+NUM_EPOCHS = 1
 LOG_FREQ = 50
 MWS_BATCH_SIZES = [32, 64, 256, 512, 1024]
 SEEDS = [0, 1, 2]
@@ -38,7 +38,7 @@ for seed in SEEDS:
             cmd.append('--tcvae')
         if USE_WANDB:
             cmd += ['--wandb', '--wandb_project', WANDB_PROJECT, '--wandb_mode', WANDB_MODE,
-                    '--wandb_run_name', f'wms-bs{bs}_seed{seed}']
+                    '--wandb_run_name', f'mws-bs{bs}_seed{seed}']
         print(f'\n=== Running mws batch-size {bs} | seed {seed} ===\n', ' '.join(cmd))
         log_path = f'runs/bs{bs}_seed{seed}.log'
         with open(log_path, 'w') as f:

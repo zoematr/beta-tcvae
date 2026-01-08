@@ -1,0 +1,16 @@
+[iteration 050] time: 0.28 	beta 6.00 	lambda 0.00 training ELBO: -546.9019 (-1116.0337)
+Active units: 0,1,2,3,4,5,8,9
+Number of active units: 8/10
+[iteration 100] time: 0.28 	beta 6.00 	lambda 0.00 training ELBO: -415.0852 (-609.3089)
+Active units: 0,1,2,3,4,5,6,7,8,9
+Number of active units: 10/10
+Computing q(z|x) distributions.
+Traceback (most recent call last):
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 581, in <module>
+    main()
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 542, in main
+    elbo_decomposition(vae, dataset_loader)
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/elbo_decomposition.py", line 102, in elbo_decomposition
+    xs = Variable(xs.view(batch_size, -1, 64, 64).cuda(), volatile=True)
+         ^^^^^^^^
+NameError: name 'Variable' is not defined

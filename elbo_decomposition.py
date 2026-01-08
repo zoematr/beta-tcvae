@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 import lib.dist as dist
 import lib.flows as flows
+from torch.autograd import Variable
 
 EPS = 1e-12
 

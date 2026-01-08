@@ -1,0 +1,23 @@
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_setup.py:_flush():80] Current SDK version is 0.23.1
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_setup.py:_flush():80] Configure stats pid to 2991
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_setup.py:_flush():80] Loading settings from /Users/zoe/.config/wandb/settings
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_setup.py:_flush():80] Loading settings from /Users/zoe/Desktop/VAEs/beta-tcvae/wandb/settings
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_setup.py:_flush():80] Loading settings from environment variables
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_init.py:setup_run_log_directory():714] Logging user logs to /Users/zoe/Desktop/VAEs/beta-tcvae/wandb/run-20260108_144212-0z6y0ef4/logs/debug.log
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_init.py:setup_run_log_directory():715] Logging internal logs to /Users/zoe/Desktop/VAEs/beta-tcvae/wandb/run-20260108_144212-0z6y0ef4/logs/debug-internal.log
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_init.py:init():841] calling init triggers
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_init.py:init():846] wandb.init called with sweep_config: {}
+config: {'dataset': 'shapes', 'dist': 'normal', 'num_epochs': 30, 'batch_size': 1024, 'mws_batch_size': 32, 'learning_rate': 0.001, 'latent_dim': 10, 'beta': 6.0, 'tcvae': True, 'exclude_mutinfo': False, 'beta_anneal': False, 'lambda_anneal': False, 'mss': False, 'conv': False, 'gpu': 0, 'visdom': False, 'save': 'test1', 'log_freq': 50, 'workers': 0, 'wandb': True, 'wandb_project': 'beta-tcvae', 'wandb_entity': None, 'wandb_run_name': 'mws-bs32_seed0', 'wandb_mode': 'online', 'seed': 0, '_wandb': {}}
+2026-01-08 14:42:12,653 INFO    MainThread:2991 [wandb_init.py:init():889] starting backend
+2026-01-08 14:42:12,892 INFO    MainThread:2991 [wandb_init.py:init():892] sending inform_init request
+2026-01-08 14:42:12,922 INFO    MainThread:2991 [wandb_init.py:init():900] backend started and connected
+2026-01-08 14:42:12,943 INFO    MainThread:2991 [wandb_init.py:init():970] updated telemetry
+2026-01-08 14:42:12,964 INFO    MainThread:2991 [wandb_init.py:init():994] communicating run to backend with 90.0 second timeout
+2026-01-08 14:42:13,547 INFO    MainThread:2991 [wandb_init.py:init():1041] starting run threads in backend
+2026-01-08 14:42:13,862 INFO    MainThread:2991 [wandb_run.py:_console_start():2521] atexit reg
+2026-01-08 14:42:13,863 INFO    MainThread:2991 [wandb_run.py:_redirect():2369] redirect: wrap_raw
+2026-01-08 14:42:13,863 INFO    MainThread:2991 [wandb_run.py:_redirect():2438] Wrapping output streams.
+2026-01-08 14:42:13,863 INFO    MainThread:2991 [wandb_run.py:_redirect():2461] Redirects installed.
+2026-01-08 14:42:13,869 INFO    MainThread:2991 [wandb_init.py:init():1081] run started, returning control to user process
+2026-01-08 14:42:26,725 INFO    wandb-AsyncioManager-main:2991 [service_client.py:_forward_responses():80] Reached EOF.
+2026-01-08 14:42:26,726 INFO    wandb-AsyncioManager-main:2991 [mailbox.py:close():137] Closing mailbox, abandoning 1 handles.

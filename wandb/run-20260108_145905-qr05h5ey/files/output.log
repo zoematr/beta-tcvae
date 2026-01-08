@@ -1,0 +1,18 @@
+[iteration 050] time: 0.26 	beta 6.00 	lambda 0.00 training ELBO: -486.0719 (-1090.7738)
+Active units: 0,1,3,7,8,9
+Number of active units: 6/10
+[iteration 100] time: 0.26 	beta 6.00 	lambda 0.00 training ELBO: -410.2271 (-576.6281)
+Active units: 0,1,2,3,5,7,9
+Number of active units: 7/10
+Computing q(z|x) distributions.
+Traceback (most recent call last):
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 581, in <module>
+    main()
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py", line 542, in main
+    elbo_decomposition(vae, dataset_loader)
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/elbo_decomposition.py", line 103, in elbo_decomposition
+    xs = Variable(xs.view(batch_size, -1, 64, 64).cuda(), volatile=True)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/lib/python3.11/site-packages/torch/cuda/__init__.py", line 403, in _lazy_init
+    raise AssertionError("Torch not compiled with CUDA enabled")
+AssertionError: Torch not compiled with CUDA enabled
