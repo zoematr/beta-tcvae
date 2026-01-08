@@ -92,6 +92,19 @@ def elbo_decomposition(vae, dataset_loader):
     K = vae.z_dim                    # number of latent variables
     S = 1                            # number of latent variable samples
     nparams = vae.q_dist.nparams
+    if torch.cuda.is_available():
+        torch.cuda.set_device(args.gpu)
+        device = torch.device(f'cuda:{args.gpu}')
+        pin_memory = True
+        use_cuda_flag = True
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = torch.device('mps')
+        pin_memory = False
+        use_cuda_flag = False
+    else:
+        device = torch.device('cpu')
+        pin_memory = False
+        use_cuda_flag = False
 
     print('Computing q(z|x) distributions.')
     # compute the marginal q(z_j|x_n) distributions
