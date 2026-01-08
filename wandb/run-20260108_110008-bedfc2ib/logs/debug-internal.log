@@ -1,0 +1,11 @@
+{"time":"2026-01-08T11:00:08.886031+01:00","level":"INFO","msg":"stream: starting","core version":"0.23.1"}
+{"time":"2026-01-08T11:00:09.181724+01:00","level":"INFO","msg":"stream: created new stream","id":"bedfc2ib"}
+{"time":"2026-01-08T11:00:09.181795+01:00","level":"INFO","msg":"handler: started","stream_id":"bedfc2ib"}
+{"time":"2026-01-08T11:00:09.182257+01:00","level":"INFO","msg":"stream: started","id":"bedfc2ib"}
+{"time":"2026-01-08T11:00:09.182387+01:00","level":"INFO","msg":"sender: started","stream_id":"bedfc2ib"}
+{"time":"2026-01-08T11:00:09.182431+01:00","level":"INFO","msg":"writer: started","stream_id":"bedfc2ib"}
+{"time":"2026-01-08T11:01:47.542671+01:00","level":"INFO","msg":"stream: closing","id":"bedfc2ib"}
+{"time":"2026-01-08T11:01:48.01022+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-01-08T11:01:48.244316+01:00","level":"INFO","msg":"handler: closed","stream_id":"bedfc2ib"}
+{"time":"2026-01-08T11:01:48.24479+01:00","level":"INFO","msg":"sender: closed","stream_id":"bedfc2ib"}
+{"time":"2026-01-08T11:01:48.244808+01:00","level":"INFO","msg":"stream: closed","id":"bedfc2ib"}

@@ -86,76 +86,82 @@ def analytical_NLL(qz_params, q_dist, prior_dist, qz_samples=None):
     return nlogqz_condx, nlogpz
 
 
-def elbo_decomposition(vae, dataset_loader, mws_batch_size=None, device=None):
-    """
-    Computes logpx, TC (dependence), MI, dimwise KL, etc.
-    Uses mws_batch_size columns for the MWS estimator if provided,
-    otherwise uses the current minibatch size.
-    """
-    vae.eval()
-    if device is None:
-        device = next(vae.parameters()).device
+def elbo_decomposition(vae, dataset_loader):
+    N = len(dataset_loader.dataset)  # number of data samples
+    K = vae.z_dim                    # number of latent variables
+    S = 1                            # number of latent variable samples
+    nparams = vae.q_dist.nparams
 
-    logpx_all = []
-    tc_all = []
-    mi_all = []
-    dkl_all = []
+    print('Computing q(z|x) distributions.')
+    # compute the marginal q(z_j|x_n) distributions
+    qz_params = torch.Tensor(N, K, nparams)
+    n = 0
+    logpx = 0
+    for xs in dataset_loader:
+        batch_size = xs.size(0)
+        xs = Variable(xs.view(batch_size, -1, 64, 64).cuda(), volatile=True)
+        z_params = vae.encoder.forward(xs).view(batch_size, K, nparams)
+        qz_params[n:n + batch_size] = z_params.data
+        n += batch_size
 
-    dataset_size = len(dataset_loader.dataset)
+        # estimate reconstruction term
+        for _ in range(S):
+            z = vae.q_dist.sample(params=z_params)
+            x_params = vae.decoder.forward(z)
+            logpx += vae.x_dist.log_density(xs, params=x_params).view(batch_size, -1).data.sum()
+    # Reconstruction term
+    logpx = logpx / (N * S)
 
-    with torch.no_grad():
-        for xs in dataset_loader:
-            x = xs.to(device)
-            B = x.size(0)                           # rows from this minibatch
-            Bcols = min(mws_batch_size or B, B)     # cols for MWS (<= B)
-            # encode/forward
-            x_recon, x_params, z, q_params = vae.reconstruct_img(x)
-            # per-sample pieces
-            logpx = vae.x_dist.log_density(x, params=x_params).view(B, -1).sum(1)
-            logqz_condx = vae.q_dist.log_density(z, params=q_params).view(B, -1).sum(1)
-            prior_params = vae._get_prior_params(B)
-            logpz = vae.prior_dist.log_density(z, params=prior_params).view(B, -1).sum(1)
+    qz_params = Variable(qz_params.cuda(), volatile=True)
 
-            # MWS: rows B, cols Bcols
-            z_rows = z[:B]
-            q_cols = q_params[:Bcols]
+    print('Sampling from q(z).')
+    # sample S times from each marginal q(z_j|x_n)
+    qz_params_expanded = qz_params.view(N, K, 1, nparams).expand(N, K, S, nparams)
+    qz_samples = vae.q_dist.sample(params=qz_params_expanded)
+    qz_samples = qz_samples.transpose(0, 1).contiguous().view(K, N * S)
 
-            # shape (B, Bcols, z_dim)
-            logqz_ij = vae.q_dist.log_density(
-                z_rows.view(B, 1, vae.z_dim),
-                q_cols.view(1, Bcols, vae.z_dim, vae.q_dist.nparams),
-            )
+    print('Estimating entropies.')
+    marginal_entropies, joint_entropy = estimate_entropies(qz_samples, qz_params, vae.q_dist)
 
-            # joint and product-of-marginals normalizers
-            norm = math.log(max(Bcols * dataset_size, 1))  # safe
-            # product of marginals
-            logqz_prodm = (torch.logsumexp(logqz_ij, dim=1) - norm).sum(1)  # (B,)
-            # joint
-            logqz_joint = torch.logsumexp(logqz_ij.sum(2), dim=1) - norm    # (B,)
+    if hasattr(vae.q_dist, 'NLL'):
+        nlogqz_condx = vae.q_dist.NLL(qz_params).mean(0)
+    else:
+        nlogqz_condx = - vae.q_dist.log_density(qz_samples,
+            qz_params_expanded.transpose(0, 1).contiguous().view(K, N * S)).mean(1)
 
-            # MI/TC/DWKL terms
-            tc = (logqz_joint - logqz_prodm)          # (B,)
-            mi = (logqz_condx - logqz_joint)          # (B,)
-            dkl = (logqz_prodm - logpz)               # (B,)
+    if hasattr(vae.prior_dist, 'NLL'):
+        pz_params = vae._get_prior_params(N * K).contiguous().view(N, K, -1)
+        nlogpz = vae.prior_dist.NLL(pz_params, qz_params).mean(0)
+    else:
+        nlogpz = - vae.prior_dist.log_density(qz_samples.transpose(0, 1)).mean(0)
 
-            # collect
-            logpx_all.append(logpx)
-            tc_all.append(tc)
-            mi_all.append(mi)
-            dkl_all.append(dkl)
+    # nlogqz_condx, nlogpz = analytical_NLL(qz_params, vae.q_dist, vae.prior_dist)
+    nlogqz_condx = nlogqz_condx.data
+    nlogpz = nlogpz.data
 
-    # stack and return scalars/tensors
-    logpx_all = torch.cat(logpx_all)
-    tc_all = torch.cat(tc_all)
-    mi_all = torch.cat(mi_all)
-    dkl_all = torch.cat(dkl_all)
+    # Independence term
+    # KL(q(z)||prod_j q(z_j)) = log q(z) - sum_j log q(z_j)
+    dependence = (- joint_entropy + marginal_entropies.sum())[0]
 
-    return (logpx_all.mean().item(),
-            tc_all.mean().item(),
-            mi_all.mean().item(),
-            dkl_all.mean().item(),
-            # keep compatibility: return some extras as None if your old API did
-            None, None, None)
+    # Information term
+    # KL(q(z|x)||q(z)) = log q(z|x) - log q(z)
+    information = (- nlogqz_condx.sum() + joint_entropy)[0]
+
+    # Dimension-wise KL term
+    # sum_j KL(q(z_j)||p(z_j)) = sum_j (log q(z_j) - log p(z_j))
+    dimwise_kl = (- marginal_entropies + nlogpz).sum()
+
+    # Compute sum of terms analytically
+    # KL(q(z|x)||p(z)) = log q(z|x) - log p(z)
+    analytical_cond_kl = (- nlogqz_condx + nlogpz).sum()
+
+    print('Dependence: {}'.format(dependence))
+    print('Information: {}'.format(information))
+    print('Dimension-wise KL: {}'.format(dimwise_kl))
+    print('Analytical E_p(x)[ KL(q(z|x)||p(z)) ]: {}'.format(analytical_cond_kl))
+    print('Estimated  ELBO: {}'.format(logpx - analytical_cond_kl))
+
+    return logpx, dependence, information, dimwise_kl, analytical_cond_kl, marginal_entropies, joint_entropy
 
 
 if __name__ == '__main__':

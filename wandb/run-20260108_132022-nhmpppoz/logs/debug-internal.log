@@ -1,0 +1,11 @@
+{"time":"2026-01-08T13:20:22.634778+01:00","level":"INFO","msg":"stream: starting","core version":"0.23.1"}
+{"time":"2026-01-08T13:20:23.080276+01:00","level":"INFO","msg":"stream: created new stream","id":"nhmpppoz"}
+{"time":"2026-01-08T13:20:23.082669+01:00","level":"INFO","msg":"handler: started","stream_id":"nhmpppoz"}
+{"time":"2026-01-08T13:20:23.083429+01:00","level":"INFO","msg":"stream: started","id":"nhmpppoz"}
+{"time":"2026-01-08T13:20:23.083969+01:00","level":"INFO","msg":"writer: started","stream_id":"nhmpppoz"}
+{"time":"2026-01-08T13:20:23.084905+01:00","level":"INFO","msg":"sender: started","stream_id":"nhmpppoz"}
+{"time":"2026-01-08T13:27:34.515409+01:00","level":"INFO","msg":"stream: closing","id":"nhmpppoz"}
+{"time":"2026-01-08T13:27:35.207683+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-01-08T13:27:35.512772+01:00","level":"INFO","msg":"handler: closed","stream_id":"nhmpppoz"}
+{"time":"2026-01-08T13:27:35.513308+01:00","level":"INFO","msg":"sender: closed","stream_id":"nhmpppoz"}
+{"time":"2026-01-08T13:27:35.513346+01:00","level":"INFO","msg":"stream: closed","id":"nhmpppoz"}

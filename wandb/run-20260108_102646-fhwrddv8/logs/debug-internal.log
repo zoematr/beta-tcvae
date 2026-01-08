@@ -1,0 +1,11 @@
+{"time":"2026-01-08T10:26:47.274464+01:00","level":"INFO","msg":"stream: starting","core version":"0.23.1"}
+{"time":"2026-01-08T10:26:47.589296+01:00","level":"INFO","msg":"stream: created new stream","id":"fhwrddv8"}
+{"time":"2026-01-08T10:26:47.589778+01:00","level":"INFO","msg":"writer: started","stream_id":"fhwrddv8"}
+{"time":"2026-01-08T10:26:47.589777+01:00","level":"INFO","msg":"handler: started","stream_id":"fhwrddv8"}
+{"time":"2026-01-08T10:26:47.590058+01:00","level":"INFO","msg":"stream: started","id":"fhwrddv8"}
+{"time":"2026-01-08T10:26:47.590146+01:00","level":"INFO","msg":"sender: started","stream_id":"fhwrddv8"}
+{"time":"2026-01-08T10:27:55.630959+01:00","level":"INFO","msg":"stream: closing","id":"fhwrddv8"}
+{"time":"2026-01-08T10:27:56.727625+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-01-08T10:27:57.009208+01:00","level":"INFO","msg":"handler: closed","stream_id":"fhwrddv8"}
+{"time":"2026-01-08T10:27:57.009555+01:00","level":"INFO","msg":"sender: closed","stream_id":"fhwrddv8"}
+{"time":"2026-01-08T10:27:57.009596+01:00","level":"INFO","msg":"stream: closed","id":"fhwrddv8"}

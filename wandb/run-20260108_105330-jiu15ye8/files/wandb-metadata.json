@@ -1,0 +1,60 @@
+{
+  "os": "macOS-13.0.1-arm64-arm-64bit",
+  "python": "CPython 3.11.8",
+  "startedAt": "2026-01-08T09:53:30.155804Z",
+  "args": [
+    "--dataset",
+    "shapes",
+    "--beta",
+    "6",
+    "--tcvae",
+    "--mws-batch-size",
+    "32",
+    "--num-epochs",
+    "30",
+    "--log_freq",
+    "50",
+    "--seed",
+    "0",
+    "--tcvae",
+    "--wandb",
+    "--wandb_project",
+    "beta-tcvae",
+    "--wandb_mode",
+    "online",
+    "--wandb_run_name",
+    "wms-bs32_seed0"
+  ],
+  "program": "/Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py",
+  "codePath": "vae_quant.py",
+  "codePathLocal": "vae_quant.py",
+  "git": {
+    "remote": "https://github.com/zoematr/beta-tcvae.git",
+    "commit": "0cbe6fd55b1a27e4ee956f77ae4a3b14dd31584d"
+  },
+  "email": "zoe.matrullo@gmail.com",
+  "root": "/Users/zoe/Desktop/VAEs/beta-tcvae",
+  "host": "Air-di-Zoe.fritz.box",
+  "executable": "/Users/zoe/Desktop/VAEs/beta-tcvae/.venv/bin/python",
+  "cpu_count": 8,
+  "cpu_count_logical": 8,
+  "disk": {
+    "/": {
+      "total": "245107195904",
+      "used": "237714915328"
+    }
+  },
+  "memory": {
+    "total": "8589934592"
+  },
+  "apple": {
+    "name": "Apple M1",
+    "ecpuCores": 4,
+    "pcpuCores": 4,
+    "gpuCores": 7,
+    "memoryGb": 8,
+    "swapTotalBytes": "8589934592",
+    "ramTotalBytes": "8589934592"
+  },
+  "writerId": "vcsjqjrldov70shm0qyiw9zcdzw8y99i"
+}

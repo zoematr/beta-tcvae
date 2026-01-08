@@ -1,4 +1,4 @@
-import sys, subprocess, platform
+import sys, subprocess, platform, os
 print('Python executable:', sys.executable)
 print('Python version:', platform.python_version())
 print('Verifying torch in current kernel...')
@@ -19,14 +19,17 @@ WANDB_PROJECT = 'beta-tcvae'
 WANDB_ENTITY = None
 WANDB_MODE = 'online'
 
-import os, sys, subprocess
+env = os.environ.copy()
+env['PYTHONUNBUFFERED'] = '1'
 os.makedirs('runs', exist_ok=True)
 
 for seed in SEEDS:
+    print(f'\n########## Running experiments for seed {seed} ##########\n')
     for bs in MWS_BATCH_SIZES:
         cmd = [sys.executable, 'vae_quant.py',
                '--dataset', DATASET,
                '--beta', str(BETA),
+               '--tcvae',
                '--mws-batch-size', str(bs),
                '--num-epochs', str(NUM_EPOCHS),
                '--log_freq', str(LOG_FREQ),

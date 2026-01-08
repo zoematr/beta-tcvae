@@ -1,0 +1,11 @@
+usage: vae_quant.py [-h] [-d {shapes,faces}] [-dist {normal,laplace,flow}]
+                    [-n NUM_EPOCHS] [-b BATCH_SIZE] [-mws MWS_BATCH_SIZE]
+                    [-l LEARNING_RATE] [-z LATENT_DIM] [--beta BETA] [--tcvae]
+                    [--exclude-mutinfo] [--beta-anneal] [--lambda-anneal]
+                    [--mss] [--conv] [--gpu GPU] [--visdom] [--save SAVE]
+                    [--log_freq LOG_FREQ] [--workers WORKERS] [--wandb]
+                    [--wandb_project WANDB_PROJECT]
+                    [--wandb_entity WANDB_ENTITY]
+                    [--wandb_run_name WANDB_RUN_NAME]
+                    [--wandb_mode WANDB_MODE] [--seed SEED]
+vae_quant.py: error: unrecognized arguments: --tcvae--mws-batch-size 256

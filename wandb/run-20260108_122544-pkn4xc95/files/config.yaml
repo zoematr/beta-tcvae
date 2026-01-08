@@ -1,0 +1,124 @@
+_wandb:
+    value:
+        cli_version: 0.23.1
+        e:
+            yz84vzq64poqt3rq1p7gae8sxefkxqjq:
+                apple:
+                    ecpuCores: 4
+                    gpuCores: 7
+                    memoryGb: 8
+                    name: Apple M1
+                    pcpuCores: 4
+                    ramTotalBytes: "8589934592"
+                    swapTotalBytes: "7516192768"
+                args:
+                    - --dataset
+                    - shapes
+                    - --beta
+                    - "6"
+                    - --tcvae
+                    - --mws-batch-size
+                    - "32"
+                    - --num-epochs
+                    - "30"
+                    - --log_freq
+                    - "50"
+                    - --seed
+                    - "0"
+                    - --tcvae
+                    - --wandb
+                    - --wandb_project
+                    - beta-tcvae
+                    - --wandb_mode
+                    - online
+                    - --wandb_run_name
+                    - wms-bs32_seed0
+                codePath: vae_quant.py
+                codePathLocal: vae_quant.py
+                cpu_count: 8
+                cpu_count_logical: 8
+                disk:
+                    /:
+                        total: "245107195904"
+                        used: "237441904640"
+                email: zoe.matrullo@gmail.com
+                executable: /Users/zoe/Desktop/VAEs/beta-tcvae/.venv/bin/python
+                git:
+                    commit: 0cbe6fd55b1a27e4ee956f77ae4a3b14dd31584d
+                    remote: https://github.com/zoematr/beta-tcvae.git
+                host: Air-di-Zoe.fritz.box
+                memory:
+                    total: "8589934592"
+                os: macOS-13.0.1-arm64-arm-64bit
+                program: /Users/zoe/Desktop/VAEs/beta-tcvae/vae_quant.py
+                python: CPython 3.11.8
+                root: /Users/zoe/Desktop/VAEs/beta-tcvae
+                startedAt: "2026-01-08T11:25:44.483756Z"
+                writerId: yz84vzq64poqt3rq1p7gae8sxefkxqjq
+        m: []
+        python_version: 3.11.8
+        t:
+            "1":
+                - 1
+                - 41
+            "2":
+                - 1
+                - 41
+            "3":
+                - 13
+                - 16
+                - 62
+            "4": 3.11.8
+            "5": 0.23.1
+            "12": 0.23.1
+            "13": darwin-arm64
+batch_size:
+    value: 1024
+beta:
+    value: 6
+beta_anneal:
+    value: false
+conv:
+    value: false
+dataset:
+    value: shapes
+dist:
+    value: normal
+exclude_mutinfo:
+    value: false
+gpu:
+    value: 0
+lambda_anneal:
+    value: false
+latent_dim:
+    value: 10
+learning_rate:
+    value: 0.001
+log_freq:
+    value: 50
+mss:
+    value: false
+mws_batch_size:
+    value: 32
+num_epochs:
+    value: 30
+save:
+    value: test1
+seed:
+    value: 0
+tcvae:
+    value: true
+visdom:
+    value: false
+wandb:
+    value: true
+wandb_entity:
+    value: null
+wandb_mode:
+    value: online
+wandb_project:
+    value: beta-tcvae
+wandb_run_name:
+    value: wms-bs32_seed0
+workers:
+    value: 0

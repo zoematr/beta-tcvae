@@ -211,6 +211,7 @@ class VAE(nn.Module):
         return W.log()
 
     def elbo(self, x, dataset_size, mws_batch_size):
+
         # log p(x|z) + log p(z) - log q(z|x)
         batch_size = x.size(0) 
         x = x.view(batch_size, 1, 64, 64) #reshape input to image
@@ -236,11 +237,11 @@ class VAE(nn.Module):
 
         if not self.mss:
             # minibatch weighted sampling
-            logqz_prodmarginals = (logsumexp(_logqz, dim=1, keepdim=False) - math.log(mws_batch_size * dataset_size)).sum(1)
-            logqz = (logsumexp(_logqz.sum(2), dim=1, keepdim=False) - math.log(mws_batch_size * dataset_size))
-            logpx = logpx[:mws_batch_size]
-            logqz_condx = logqz_condx[:mws_batch_size]
-            logpz = logpz[:mws_batch_size]
+            logqz_prodmarginals = (logsumexp(_logqz, dim=1, keepdim=False) - math.log(mws_batch_size * dataset_size)).sum(1).mean()
+            logqz = (logsumexp(_logqz.sum(2), dim=1, keepdim=False) - math.log(mws_batch_size * dataset_size)).mean()
+            logqz_condx = logqz_condx[:mws_batch_size].mean()
+            logpx = logpx.mean()
+            logpz = logpz[:mws_batch_size].mean()
 
         else:
             # minibatch stratified sampling
@@ -270,6 +271,7 @@ class VAE(nn.Module):
                 modified_elbo = logpx - \
                     self.beta * (logqz - logqz_prodmarginals) - \
                     (1 - self.lamb) * (logqz_prodmarginals - logpz)
+
         return modified_elbo, elbo.detach()
 
 
@@ -375,6 +377,7 @@ def anneal_kl(args, vae, iteration):
 
 
 def main():
+    print("Running main")
     # parse command line arguments
     parser = argparse.ArgumentParser(description="parse args")
     parser.add_argument('-d', '--dataset', default='shapes', type=str, help='dataset name',
@@ -444,6 +447,7 @@ def main():
         torch.backends.cudnn.deterministic = True
 
     set_seed(args.seed)
+
     # data loader
     train_loader = setup_data_loaders(args, use_cuda=pin_memory)
     logging.info("loaded data")
@@ -496,7 +500,9 @@ def main():
             anneal_kl(args, vae, iteration)
             optimizer.zero_grad()
             x = x.to(device, non_blocking=True)
+
             obj, elbo = vae.elbo(x, dataset_size, mws_batch_size)
+
             if utils.isnan(obj).any():
                 raise ValueError('NaN spotted in objective.')
             obj.mean().mul(-1).backward()
@@ -570,5 +576,4 @@ def main():
     if wandb and args.wandb:
         wandb.finish()
 
-if __name__ == '__main__':
-    main()
+main()
