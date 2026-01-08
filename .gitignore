@@ -6,3 +6,5 @@ data/
 *.pdf
 .venv/
 test1/
+runs/
+wandb/
