@@ -485,7 +485,6 @@ def main():
     # training loop
     dataset_size = len(train_loader.dataset)
     num_iterations = len(train_loader) * args.num_epochs
-    num_iterations = 100
     mws_batch_size = args.mws_batch_size
     batch_size = args.batch_size
 
