@@ -114,7 +114,7 @@ def elbo_decomposition(vae, dataset_loader):
         # Reconstruction term
     logpx = logpx / (N * S)
 
-    qz_params = Variable(qz_params.cuda(), volatile=True)
+    qz_params = qz_params.to(device)
 
     print('Sampling from q(z).')
     # sample S times from each marginal q(z_j|x_n)
