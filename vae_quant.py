@@ -560,9 +560,7 @@ def main():
     # MIG computation
     try:
         if args.dataset == 'shapes' and mutual_info_metric_shapes:
-            mig = mutual_info_metric_shapes(vae, dataset_loader)
-        elif args.dataset == 'faces' and mutual_info_metric_faces:
-            mig = mutual_info_metric_faces(vae, dataset_loader)
+            mig = mutual_info_metric_shapes(vae, dset.Shapes())
         else:
             raise RuntimeError('MIG function not found in disentanglement_metrics.py')
 
