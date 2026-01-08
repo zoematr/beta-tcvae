@@ -57,6 +57,7 @@ def estimate_entropies(qz_samples, qz_params, q_dist, n_samples=10000, weights=N
 
 
 def mutual_info_metric_shapes(vae, shapes_dataset):
+    print("computing MIG")
     device = next(vae.parameters()).device
     dataset_loader = DataLoader(shapes_dataset, batch_size=1000, num_workers=0, shuffle=False)
 
