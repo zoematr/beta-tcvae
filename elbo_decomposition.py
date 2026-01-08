@@ -98,19 +98,20 @@ def elbo_decomposition(vae, dataset_loader):
     qz_params = torch.Tensor(N, K, nparams)
     n = 0
     logpx = 0
-    for xs in dataset_loader:
-        batch_size = xs.size(0)
-        xs = Variable(xs.view(batch_size, -1, 64, 64).cuda(), volatile=True)
-        z_params = vae.encoder.forward(xs).view(batch_size, K, nparams)
-        qz_params[n:n + batch_size] = z_params.data
-        n += batch_size
+    with torch.no_grad():
+        for xs in dataset_loader:
+            batch_size = xs.size(0)
+            xs = xs.view(batch_size, -1, 64, 64).to(device)
+            z_params = vae.encoder.forward(xs).view(batch_size, K, nparams)
+            qz_params[n:n + batch_size] = z_params
+            n += batch_size
 
-        # estimate reconstruction term
-        for _ in range(S):
-            z = vae.q_dist.sample(params=z_params)
-            x_params = vae.decoder.forward(z)
-            logpx += vae.x_dist.log_density(xs, params=x_params).view(batch_size, -1).data.sum()
-    # Reconstruction term
+            # estimate reconstruction term
+            for _ in range(S):
+                z = vae.q_dist.sample(params=z_params)
+                x_params = vae.decoder.forward(z)
+                logpx += vae.x_dist.log_density(xs, params=x_params).view(batch_size, -1).data.sum()
+        # Reconstruction term
     logpx = logpx / (N * S)
 
     qz_params = Variable(qz_params.cuda(), volatile=True)
