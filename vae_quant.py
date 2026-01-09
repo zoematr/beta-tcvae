@@ -422,7 +422,7 @@ def main():
     if torch.cuda.is_available():
         torch.cuda.set_device(args.gpu)
         device = torch.device(f'cuda:{args.gpu}')
-        pin_memory = True
+        pin_memory = False
         use_cuda_flag = True
     elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
         device = torch.device('mps')
