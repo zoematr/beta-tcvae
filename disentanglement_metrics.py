@@ -5,7 +5,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 import lib.utils as utils
-from metric_helpers.loader import load_model_and_dataset
+# from metric_helpers.loader import load_model_and_dataset
 from metric_helpers.mi_metric import compute_metric_shapes, compute_metric_faces
 
 
@@ -189,6 +189,7 @@ def mutual_info_metric_faces(vae, shapes_dataset):
     return metric, marginal_entropies, cond_entropies
 
 
+"""
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -209,3 +210,4 @@ if __name__ == '__main__':
         'cond_entropies': cond_entropies,
     }, os.path.join(args.save, 'disentanglement_metric.pth'))
     print('MIG: {:.2f}'.format(metric))
+"""

@@ -10,6 +10,8 @@ import visdom
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import logging
+
+import wandb
 import lib.dist as dist
 import lib.utils as utils
 import lib.datasets as dset
@@ -17,7 +19,7 @@ from lib.flows import FactorialNormalizingFlow
 
 from elbo_decomposition import elbo_decomposition
 from plot_latent_vs_true import plot_vs_gt_shapes, plot_vs_gt_faces  # noqa: F401
-
+from disentanglement_metrics import mutual_info_metric_shapes
 
 class MLPEncoder(nn.Module):
     def __init__(self, output_dim):
@@ -365,8 +367,8 @@ def main():
     parser.add_argument('-d', '--dataset', default='shapes', type=str, help='dataset name',
         choices=['shapes', 'faces'])
     parser.add_argument('-dist', default='normal', type=str, choices=['normal', 'laplace', 'flow'])
-    parser.add_argument('-n', '--num-epochs', default=50, type=int, help='number of training epochs')
-    parser.add_argument('-b', '--batch-size', default=2048, type=int, help='batch size')
+    parser.add_argument('-n', '--num-epochs', default=40, type=int, help='number of training epochs')
+    parser.add_argument('-b', '--batch-size', default=1024, type=int, help='batch size')
     parser.add_argument('-l', '--learning-rate', default=1e-3, type=float, help='learning rate')
     parser.add_argument('-z', '--latent-dim', default=10, type=int, help='size of latent dimension')
     parser.add_argument('--beta', default=1, type=float, help='ELBO penalty term')
@@ -496,6 +498,24 @@ def main():
         'joint_entropy': joint_entropy
     }, os.path.join(args.save, 'elbo_decomposition.pth'))
     eval('plot_vs_gt_' + args.dataset)(vae, dataset_loader.dataset, os.path.join(args.save, 'gt_vs_latent.png'))
+    
+    try:
+        if args.dataset == 'shapes' and mutual_info_metric_shapes:
+            mig = mutual_info_metric_shapes(vae, dset.Shapes())
+        else:
+            raise RuntimeError('MIG function not found in disentanglement_metrics.py')
+
+        mig_score = float(mig[0] if isinstance(mig, (tuple, list)) else mig)
+        print(f'[metrics] MIG: {mig_score:.4f}')
+        if wandb and args.wandb:
+            wandb.summary['MIG'] = mig_score
+        torch.save({'MIG': mig_score}, os.path.join(args.save, 'mig.pth'))
+    except Exception as e:
+        print(f'[metrics] MIG computation failed: {e}')
+    
+    
+    if wandb and args.wandb:
+        wandb.finish()
     return vae
 
 
