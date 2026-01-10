@@ -1,6 +1,10 @@
-data
+data/
 *__pycache__
 *.pyc
 *.png
+*.pth
 *.pdf
 .venv/
+test1/
+runs/
+wandb/
