@@ -18,7 +18,6 @@ import lib.datasets as dset
 from lib.flows import FactorialNormalizingFlow
 
 from elbo_decomposition import elbo_decomposition
-from plot_latent_vs_true import plot_vs_gt_shapes, plot_vs_gt_faces  # noqa: F401
 from disentanglement_metrics import mutual_info_metric_shapes
 
 class MLPEncoder(nn.Module):
