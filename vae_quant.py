@@ -509,7 +509,13 @@ def main():
         'marginal_entropies': marginal_entropies,
         'joint_entropy': joint_entropy
     }, os.path.join(args.save, 'elbo_decomposition.pth'))
-    
+    wandb.summary['TC'] = dependence
+    wandb.summary['DKL'] = dimwise_kl
+    wandb.summary['MI'] = information
+    wandb.summary['logpx'] = logpx
+    wandb.summary['analytical_cond_kl'] = analytical_cond_kl
+    wandb.summary['joint_entropy'] = joint_entropy
+    wandb.summary['batch_size'] = args.batch_size
     try:
         if args.dataset == 'shapes' and mutual_info_metric_shapes:
             mig = mutual_info_metric_shapes(vae, dset.Shapes())
