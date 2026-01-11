@@ -486,17 +486,7 @@ def main():
 
                 vae.eval()
 
-                # plot training and test ELBOs
-                logging.info("call plotting")
-                if args.visdom:
-                    display_samples(vae, x, vis)
-                    plot_elbo(train_elbo, vis)
 
-                utils.save_checkpoint({
-                    'state_dict': vae.state_dict(),
-                    'args': args}, args.save, 0)
-                eval('plot_vs_gt_' + args.dataset)(vae, train_loader.dataset,
-                    os.path.join(args.save, 'gt_vs_latent_{:05d}.png'.format(iteration)))
 
     # Report statistics after training
     vae.eval()
