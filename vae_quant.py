@@ -20,6 +20,9 @@ from lib.flows import FactorialNormalizingFlow
 from elbo_decomposition import elbo_decomposition
 from disentanglement_metrics import mutual_info_metric_shapes
 
+import random
+import numpy as np
+
 class MLPEncoder(nn.Module):
     def __init__(self, output_dim):
         super(MLPEncoder, self).__init__()
@@ -382,6 +385,7 @@ def main():
     parser.add_argument('--save', default='test1')
     parser.add_argument('--log_freq', default=200, type=int, help='num iterations per log')
     parser.add_argument('--workers', type=int, default=0, help='DataLoader workers (0 on macOS to avoid pickling issues)')
+    parser.add_argument('--seed', type=int, default=0, help='random seed')
     args = parser.parse_args()
 
     # Select device safely
@@ -398,6 +402,16 @@ def main():
         device = torch.device('cpu')
         pin_memory = False
         use_cuda_flag = False
+
+    # set seeds
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if use_cuda_flag and torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print(f'[seed] {args.seed}')
 
     # data loader
     train_loader = setup_data_loaders(args, use_cuda=pin_memory)
