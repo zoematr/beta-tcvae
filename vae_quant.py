@@ -385,7 +385,12 @@ def main():
     parser.add_argument('--save', default='test1')
     parser.add_argument('--log_freq', default=200, type=int, help='num iterations per log')
     parser.add_argument('--workers', type=int, default=0, help='DataLoader workers (0 on macOS to avoid pickling issues)')
-    parser.add_argument('--seed', type=int, default=0, help='random seed')
+    parser.add_argument('--wandb', action='store_true')
+    parser.add_argument('--wandb_project', default='beta-tcvae')
+    parser.add_argument('--wandb_entity', default=None)
+    parser.add_argument('--wandb_run_name', default=None)
+    parser.add_argument('--wandb_mode', default='online')
+    parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
 
     # Select device safely
