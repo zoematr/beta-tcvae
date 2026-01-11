@@ -418,6 +418,11 @@ def main():
     torch.backends.cudnn.benchmark = False
     print(f'[seed] {args.seed}')
 
+    if wandb and args.wandb:
+        wandb.init(project=args.wandb_project, entity=args.wandb_entity,
+                   name=args.wandb_run_name, mode=args.wandb_mode, config=vars(args))
+        wandb.summary['batch_size'] = args.batch_size
+
     # data loader
     train_loader = setup_data_loaders(args, use_cuda=pin_memory)
     logging.info("loaded data")
@@ -454,8 +459,7 @@ def main():
 
     # training loop
     dataset_size = len(train_loader.dataset)
-    #num_iterations = len(train_loader) * args.num_epochs
-    num_iterations = 3
+    num_iterations = len(train_loader) * args.num_epochs
     iteration = 0
     # initialize loss accumulator
     logging.info("init loss accumulator")
